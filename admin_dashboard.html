@@ -432,30 +432,46 @@
                 button.disabled = true;
                 button.textContent = 'Generating...';
                 messageDiv.style.color = '#3498db';
-                messageDiv.textContent = 'Generating timetables... This may take a few moments.';
+                messageDiv.textContent = 'Generating timetables... This may take several minutes. Please wait...';
                 
-                // Use relative URL and add timestamp to prevent caching
-                const response = await fetch('/generate-timetable', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        dept_name: selectedDepartment,
-                        college_id: collegeId,
-                        timestamp: new Date().getTime()
-                    })
-                });
+                // Create a timeout controller (longer timeout for complex generation)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
                 
-                console.log('Server response:', response);
-                const data = await response.json();
-                console.log('Response data:', data);
-                
-                if (response.ok) {
-                    if (data.ok) {
+                try {
+                    const response = await fetch('/generate-timetable', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        },
+                        credentials: 'include',
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            dept_name: selectedDepartment,
+                            college_id: collegeId,
+                            timestamp: new Date().getTime()
+                        })
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    console.log('Server response status:', response.status);
+                    
+                    // Try to parse the response
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (parseError) {
+                        console.error('Failed to parse response:', parseError);
+                        messageDiv.style.color = '#e74c3c';
+                        messageDiv.textContent = 'Server returned invalid response. Please try again or check the server logs.';
+                        return;
+                    }
+                    
+                    console.log('Response data:', data);
+                    
+                    if (response.ok && data.ok) {
                         messageDiv.style.color = '#2ecc71';
                         messageDiv.textContent = 'Timetables generated successfully! Redirecting to view timetables...';
                         
@@ -468,24 +484,27 @@
                         }, 1500);
                     } else {
                         messageDiv.style.color = '#e74c3c';
-                        messageDiv.textContent = data.error || 'Failed to generate timetable. Please try again.';
+                        const errorMsg = data.error || data.message || 'Failed to generate timetable. Please check the server logs.';
+                        messageDiv.textContent = `Error: ${errorMsg}`;
                         console.error('Server returned error:', data);
                     }
-                } else {
-                    throw new Error(response.statusText);
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    console.error('Fetch error:', fetchError);
+                    messageDiv.style.color = '#e74c3c';
+                    
+                    if (fetchError.name === 'AbortError') {
+                        messageDiv.textContent = 'Request timeout. The timetable generation took too long. Please try again.';
+                    } else if (fetchError.message.includes('Failed to fetch')) {
+                        messageDiv.textContent = 'Cannot connect to server. Please check if the server is running on localhost:5000.';
+                    } else {
+                        messageDiv.textContent = `Network error: ${fetchError.message}`;
+                    }
                 }
             } catch (error) {
                 console.error('Error details:', error);
                 messageDiv.style.color = '#e74c3c';
-                
-                // Provide more specific error messages
-                if (error.message.includes('Failed to fetch')) {
-                    messageDiv.textContent = 'Cannot connect to server. Please check if the server is running.';
-                } else if (error.name === 'TypeError') {
-                    messageDiv.textContent = 'Network error. Please check your internet connection.';
-                } else {
-                    messageDiv.textContent = `Error: ${error.message}`;
-                }
+                messageDiv.textContent = `Unexpected error: ${error.message}`;
             } finally {
                 // Re-enable button with original text
                 button.disabled = false;

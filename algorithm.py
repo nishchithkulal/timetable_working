@@ -3,7 +3,11 @@ from typing import Dict, List, Tuple, Optional, Set
 import copy
 
 # ==================== CONFIG / DATA SETUP (1-based indexing) ====================
-sections = ["A", "B", "C"]
+# These variables will be set dynamically when generate_timetable is called
+sections = ["A", "B", "C"]  # Default fallback
+subjects_per_section = {}   # Will be set dynamically
+faculties = {}              # Will be set dynamically
+
 days = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 num_days = 5
 num_periods = 7  # Teaching periods
@@ -22,63 +26,11 @@ def teaching_period_to_display_slot(period: int) -> int:
         return period + 2
 
 subjects_per_section = {
-    "A": {
-        "DSA": {"hours": 4, "lab": False, "last": False},
-        "DDCO": {"hours": 3, "lab": False, "last": False},
-        "DDCO Lab": {"hours": 2, "lab": True, "last": False},
-        "MATHS": {"hours": 4, "lab": False, "last": False},
-        "R": {"hours": 2, "lab": True, "last": False},
-        "OS": {"hours": 3, "lab": False, "last": False},
-        "OS Lab": {"hours": 2, "lab": True, "last": False},
-        "JAVA": {"hours": 3, "lab": False, "last": False},
-        "JAVA Lab": {"hours": 2, "lab": True, "last": False},
-        "DSA LAB": {"hours": 2, "lab": True, "last": False},
-        "SCR": {"hours": 2, "lab": True, "last": False},
-        "MC1": {"hours": 2, "lab": True, "last": True},
-        "SET": {"hours": 2, "lab": True, "last": False},
-        "TG": {"hours": 1, "lab": False, "last": False},
-        "REMEDIAL": {"hours": 1, "lab": False, "last": False}
-    },
-    "B": {
-        "SEPM": {"hours": 4, "lab": False, "last": False},
-        "TOC": {"hours": 5, "lab": False, "last": False},
-        "CNM": {"hours": 3, "lab": False, "last": False},
-        "CNM Lab": {"hours": 2, "lab": True, "last": False},
-        "OODPL LAB": {"hours": 2, "lab": True, "last": False},
-        "AI": {"hours": 3, "lab": False, "last": False},
-        "RMI": {"hours": 4, "lab": False, "last": False},
-        "EVS": {"hours": 1, "lab": False, "last": False},
-        "MP": {"hours": 4, "lab": True, "last": False},
-        "MC2": {"hours": 2, "lab": True, "last": True},
-        "SET": {"hours": 2, "lab": True, "last": False},
-        "TG": {"hours": 1, "lab": False, "last": False},
-        "REMEDIAL": {"hours": 2, "lab": False, "last": True}
-    },
-    "C": {
-        "RPA": {"hours": 3, "lab": False, "last": False},
-        "RPA Lab": {"hours": 2, "lab": True, "last": False},
-        "CNS": {"hours": 4, "lab": False, "last": False},
-        "PC": {"hours": 3, "lab": False, "last": False},
-        "PC Lab": {"hours": 2, "lab": True, "last": False},
-        "APD": {"hours": 3, "lab": False, "last": False},
-        "PROJECT": {"hours": 6, "lab": True, "last": False},
-        "NTM": {"hours": 3, "lab": False, "last": False},
-        "REMEDIAL": {"hours": 8, "lab": False, "last": True},
-        "TG": {"hours": 1, "lab": False, "last": False}
-    }
+    # Will be populated dynamically from database
 }
 
 faculties = {
-    "DSA": "RS", "DDCO": "PA", "MATHS": "SH", "R": "AKK", "OS": "KV",
-    "JAVA": "CVK", "DSA LAB": "RS", "SCR": "SSR",
-    "MC1": ["AKK", "MHS", "CVK", "KA"],
-    "SEPM": "MHS", "TOC": "NH", "CNM": "SSR", "OODPL LAB": "MHS",
-    "AI": "CVK", "RMI": "KA", "EVS": "KV", "MP": "RS",
-    "MC2": ["AKK", "MHS", "CVK", "KA"],
-    "SET": "AKK", "RPA": "KA", "CNS": "MHS", "PC": "AKK", "APD": "SSR",
-    "PROJECT": "NH", "NTM": "KV", "REMEDIAL": "CA", "TG": "CA",
-    "DDCO Lab":"PA","OS Lab":"KV","JAVA Lab":"CVK",
-    "CNM Lab":"SSR","RPA Lab":"KA","PC Lab":"AKK"
+    # Will be populated dynamically from database
 }
 
 assigned_multi_faculty = {}
@@ -94,10 +46,13 @@ def get_faculty_for_subject(section: str, subject: str) -> Optional[str]:
         key = (section, subject)
         if key in assigned_multi_faculty:
             return assigned_multi_faculty[key]
-        chosen = random.choice(faculty_data)
-        assigned_multi_faculty[key] = chosen
+        # For list, just pick the first one (as per requirement)
+        chosen = faculty_data[0] if faculty_data else None
+        if chosen:
+            assigned_multi_faculty[key] = chosen
         return chosen
     return None
+
 
 # ==================== STRICT / FORBIDDEN ====================
 strict_subject_placement = {
@@ -1058,11 +1013,31 @@ def section_timetable(section: str, all_timetables: Dict[str, Dict[int, Dict[int
     # return best effort if no success
     return best_tt, best_counters, False
 
-def store_section_timetables():
+def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict=None):
     """Generate and return timetables for all sections.
+    
+    Args:
+        section_list: List of section names (e.g., ["A", "B", "C"])
+        subjects_dict: Dictionary with structure {section: {subject_name: {hours, lab, last}, ...}, ...}
+        faculty_dict: Dictionary mapping subject_name to faculty_name
+    
     Returns a dictionary mapping section names to their timetables.
     Each timetable is a dictionary mapping day numbers (1-5) to dictionaries mapping period numbers (1-7) to subject names."""
-    max_global_attempts = 50
+    
+    global sections, subjects_per_section, faculties, assigned_multi_faculty
+    
+    # Set the global variables from parameters
+    if section_list is not None:
+        sections = section_list
+    if subjects_dict is not None:
+        subjects_per_section = subjects_dict
+    if faculty_dict is not None:
+        faculties = faculty_dict
+    
+    # Reset assigned faculties for this generation
+    assigned_multi_faculty = {}
+    
+    max_global_attempts = 5  # Reduced from 50 for faster generation
     global_attempt = 0
     best_all_timetables = None
     best_all_counters = None

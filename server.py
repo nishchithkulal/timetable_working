@@ -111,8 +111,7 @@ class Subject(db.Model):
     subject_code = db.Column(db.String(20), nullable=False)
     dept_name = db.Column(db.String(100), nullable=False)
     college_id = db.Column(db.String(50), nullable=False)
-    faculty_id = db.Column(db.String(50), nullable=False)  # FK to Faculty
-    faculty_name = db.Column(db.String(100), nullable=False)  # Cached copy for display
+    faculty_name = db.Column(db.String(100), nullable=False)  # Faculty assigned to this subject
     section = db.Column(db.String(10), nullable=False)
     hours = db.Column(db.Integer, nullable=False)
     lab = db.Column(db.Boolean, nullable=False, default=False)
@@ -124,13 +123,6 @@ class Subject(db.Model):
             ['dept_name', 'college_id'],
             ['departments.name', 'departments.college_id'],
             name='fk_subject_department',
-            onupdate='CASCADE',
-            ondelete='RESTRICT'
-        ),
-        db.ForeignKeyConstraint(
-            ['faculty_id', 'college_id'],
-            ['faculty.faculty_id', 'faculty.college_id'],
-            name='fk_subject_faculty',
             onupdate='CASCADE',
             ondelete='RESTRICT'
         ),
@@ -283,6 +275,137 @@ class FacultyTimetable(db.Model):
 with app.app_context():
     db.create_all()
 
+def extract_faculty_timetables(section_timetables, faculties, subjects_per_section, dept_name, college_id):
+    """Extract individual faculty timetables from section timetables.
+    
+    Args:
+        section_timetables: {section: {day: {period: subject}}}
+        faculties: {subject_name: faculty_name}
+        subjects_per_section: {section: {subject_name: {hours, lab, last}}}
+        dept_name: Department name
+        college_id: College ID
+    
+    Returns:
+        {faculty_name: {section: {day: {period: subject}}}}
+    """
+    faculty_timetables = {}
+    
+    # Iterate through each section and its timetable
+    for section, section_tt in section_timetables.items():
+        # Iterate through days and periods
+        for day in section_tt:
+            for period in section_tt[day]:
+                subject = section_tt[day][period]
+                
+                # Skip empty slots and REMEDIAL
+                if subject is None or subject == 'REMEDIAL':
+                    continue
+                
+                # Get faculty for this subject
+                faculty_name = faculties.get(subject)
+                if not faculty_name:
+                    continue
+                
+                # Initialize faculty timetable if not exists
+                if faculty_name not in faculty_timetables:
+                    faculty_timetables[faculty_name] = {}
+                
+                if section not in faculty_timetables[faculty_name]:
+                    # Create empty timetable structure for this faculty-section combination
+                    faculty_timetables[faculty_name][section] = {}
+                    for d in range(1, 6):  # 5 days
+                        faculty_timetables[faculty_name][section][d] = {}
+                        for p in range(1, 8):  # 7 periods
+                            faculty_timetables[faculty_name][section][d][p] = None
+                
+                # Add this subject to the faculty's timetable
+                if day not in faculty_timetables[faculty_name][section]:
+                    faculty_timetables[faculty_name][section][day] = {}
+                
+                faculty_timetables[faculty_name][section][day][period] = subject
+    
+    logging.info(f"Extracted {len(faculty_timetables)} faculty timetables")
+    return faculty_timetables
+
+def build_timetable_data_from_db(dept_name: str, college_id: str):
+    """
+    Fetch subject and faculty data from database and build the 3 data structures
+    needed by the algorithm.
+    
+    Returns:
+        tuple: (sections, subjects_per_section, faculties) or (None, None, None) if error
+    """
+    try:
+        # Get department and sections
+        department = Department.query.filter_by(name=dept_name, college_id=college_id).first()
+        if not department:
+            logging.error(f"Department not found: {dept_name}")
+            return None, None, None
+        
+        sections = department.sections if department.sections else []
+        if not sections:
+            logging.error(f"Department {dept_name} has no sections defined")
+            return None, None, None
+        
+        # Fetch all subjects for this department (using only columns that exist)
+        subjects = Subject.query.filter_by(
+            dept_name=dept_name,
+            college_id=college_id
+        ).all()
+        
+        if not subjects:
+            logging.error(f"No subjects found for department {dept_name}")
+            return None, None, None
+        
+        # Build subjects_per_section dictionary
+        # Structure: {section: {subject_name: {hours, lab, last}, ...}, ...}
+        subjects_per_section = {}
+        faculties = {}
+        
+        for section in sections:
+            subjects_per_section[section] = {}
+        
+        # Process each subject
+        for subject in subjects:
+            section = subject.section
+            
+            # Only include subjects for sections that exist in the department
+            if section not in subjects_per_section:
+                logging.warning(f"Subject {subject.subject_name} has section {section} not in department sections {sections}")
+                continue
+            
+            subject_info = {
+                'hours': subject.hours,
+                'lab': bool(subject.lab),
+                'last': bool(subject.last)
+            }
+            
+            subjects_per_section[section][subject.subject_name] = subject_info
+            
+            # Build faculties mapping (pick first one if multiple rows)
+            if subject.subject_name not in faculties:
+                faculties[subject.subject_name] = subject.faculty_name
+        
+        # Add REMEDIAL subject for each section if not already present
+        for section in sections:
+            if 'REMEDIAL' not in subjects_per_section[section]:
+                subjects_per_section[section]['REMEDIAL'] = {
+                    'hours': 1,
+                    'lab': False,
+                    'last': False
+                }
+        
+        logging.info(f"Built timetable data for {dept_name}:")
+        logging.info(f"  Sections: {sections}")
+        logging.info(f"  Subjects per section: {list(subjects_per_section.keys())}")
+        logging.info(f"  Total subjects: {len(faculties)}")
+        
+        return sections, subjects_per_section, faculties
+        
+    except Exception as e:
+        logging.exception("Error building timetable data from database")
+        return None, None, None
+
 @app.route('/generate-timetable', methods=['POST'])
 def generate_timetable():
     try:
@@ -292,81 +415,167 @@ def generate_timetable():
         
         if not dept_name or not college_id:
             return jsonify({'ok': False, 'error': 'Department name and college ID are required'}), 400
+        
+        logging.info(f"Generating timetables for {dept_name} in college {college_id}")
+        
+        try:
+            # Fetch and build timetable data from database
+            sections, subjects_per_section, faculties = build_timetable_data_from_db(dept_name, college_id)
             
-        # Get the department to verify it exists
-        department = Department.query.filter_by(name=dept_name, college_id=college_id).first()
-        if not department:
-            return jsonify({'ok': False, 'error': 'Department not found'}), 404
+            if sections is None or subjects_per_section is None or faculties is None:
+                return jsonify({'ok': False, 'error': 'Failed to fetch timetable configuration from database'}), 400
             
-        # Generate timetables using the imported function
-        section_timetables = store_section_timetables()
+            logging.info(f"Successfully fetched data. Sections: {sections}, Subjects: {len(subjects_per_section)}")
+            
+            # Suppress algorithm debug output by redirecting stderr
+            import sys
+            import io
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = io.StringIO()
+            sys.stderr = io.StringIO()
+            
+            try:
+                # Generate timetables using the algorithm with dynamic data
+                section_timetables = store_section_timetables(
+                    section_list=sections,
+                    subjects_dict=subjects_per_section,
+                    faculty_dict=faculties
+                )
+            finally:
+                # Restore stdout/stderr
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
+            
+            if not section_timetables:
+                logging.error(f"Algorithm returned empty timetables for {dept_name}")
+                return jsonify({'ok': False, 'error': 'Timetable generation returned empty results'}), 400
+            
+            # Delete existing timetables for this department
+            SectionTimetable.query.filter_by(dept_name=dept_name, college_id=college_id).delete()
+            db.session.commit()
+            
+            # Store timetables for each section
+            inserted_ids = []
+            for section, timetable in section_timetables.items():
+                new_timetable = SectionTimetable(
+                    section_name=section,
+                    dept_name=dept_name,
+                    college_id=college_id,
+                    timetable=timetable
+                )
+                db.session.add(new_timetable)
+                db.session.flush()  # Get the ID before commit
+                inserted_ids.append(new_timetable.id)
+            
+            db.session.commit()
+            logging.info("Inserted timetables with ids=%s for sections=%s", inserted_ids, list(section_timetables.keys()))
+            
+            # Extract and store faculty timetables
+            faculty_timetables = extract_faculty_timetables(section_timetables, faculties, subjects_per_section, dept_name, college_id)
+            
+            # Delete existing faculty timetables for this department
+            FacultyTimetable.query.filter_by(dept_name=dept_name, college_id=college_id).delete()
+            db.session.commit()
+            
+            # Store faculty timetables
+            faculty_ids = []
+            for faculty_name, faculty_tt_data in faculty_timetables.items():
+                # Get faculty_id from Faculty table
+                faculty_record = Faculty.query.filter_by(faculty_name=faculty_name, college_id=college_id).first()
+                if not faculty_record:
+                    logging.warning(f"Faculty {faculty_name} not found in database for college {college_id}, skipping")
+                    continue
+                
+                faculty_id = faculty_record.faculty_id
+                
+                for section, timetable in faculty_tt_data.items():
+                    new_faculty_tt = FacultyTimetable(
+                        college_id=college_id,
+                        dept_name=dept_name,
+                        section=section,
+                        faculty_id=faculty_id,
+                        faculty_name=faculty_name,
+                        timetable=timetable
+                    )
+                    db.session.add(new_faculty_tt)
+                    db.session.flush()
+                    faculty_ids.append(new_faculty_tt.id)
+            
+            db.session.commit()
+            logging.info("Inserted faculty timetables with ids=%s", faculty_ids)
+            
+            return jsonify({
+                'ok': True,
+                'message': 'Timetables generated and stored successfully',
+                'ids': inserted_ids,
+                'faculty_ids': faculty_ids,
+                'sections': list(section_timetables.keys())
+            }), 201
         
-        # Validate all sections exist in department.sections (Issue #3 fix)
-        valid_sections = department.sections if department.sections else []
-        for section in section_timetables.keys():
-            if section not in valid_sections:
-                return jsonify({'ok': False, 'error': f'Invalid section: {section}. Valid sections: {valid_sections}'}), 400
-        
-        # Delete existing timetables for this department
-        SectionTimetable.query.filter_by(dept_name=dept_name, college_id=college_id).delete()
-        db.session.commit()
-        
-        # Store timetables for each section
-        inserted_ids = []
-        for section, timetable in section_timetables.items():
-            new_timetable = SectionTimetable(
-                section_name=section,
-                dept_name=dept_name,
-                college_id=college_id,
-                timetable=timetable
-            )
-            db.session.add(new_timetable)
-            db.session.flush()  # Get the ID before commit
-            inserted_ids.append(new_timetable.id)
-        
-        db.session.commit()
-        logging.info("Inserted timetables with ids=%s", inserted_ids)
-        
-        return jsonify({
-            'ok': True,
-            'message': 'Timetables generated and stored successfully',
-            'ids': inserted_ids,
-            'timetables': section_timetables
-        }), 201
+        except Exception as algo_error:
+            logging.exception("Error during timetable generation")
+            db.session.rollback()
+            return jsonify({'ok': False, 'error': f'Timetable generation failed: {str(algo_error)}'}), 500
 
     except Exception as e:
         db.session.rollback()
         logging.exception("Failed to generate/store timetables")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-def convert_timetable_dict_to_array(timetable_dict):
-    """Convert timetable from nested dict format {day: {period: subject}} to 2D array format.
-    Handles both int and string keys since JSON converts int keys to strings."""
-    if not timetable_dict or not isinstance(timetable_dict, dict):
+def convert_timetable_dict_to_array(timetable_data):
+    """Convert timetable to 2D array format [5 days][7 periods].
+    Handles both:
+    1. Nested dict format {day: {period: subject}} (from algorithm.py original)
+    2. Already-array format [[...], ...] (from database storage)
+    """
+    if not timetable_data:
         return [[None] * 7 for _ in range(5)]
     
-    timetable_array = []
-    for day in range(1, 6):  # 5 days
-        day_array = []
-        # Try both integer and string keys since JSON converts int keys to strings
-        day_key = day if day in timetable_dict else str(day)
-        
-        if day_key in timetable_dict:
-            day_periods = timetable_dict[day_key]
-            for period in range(1, 8):  # 7 periods
-                if isinstance(day_periods, dict):
-                    # Try both int and string period keys
-                    period_value = day_periods.get(period)
-                    if period_value is None:
-                        period_value = day_periods.get(str(period))
-                    day_array.append(period_value)
+    # If already an array of arrays, return as-is (just validate structure)
+    if isinstance(timetable_data, list):
+        # Ensure it's a proper 2D array with 5 days and 7 periods per day
+        if len(timetable_data) == 5:
+            validated = []
+            for day in timetable_data:
+                if isinstance(day, list):
+                    # Ensure day has exactly 7 periods
+                    day_copy = day[:7] + [None] * (7 - len(day)) if len(day) < 7 else day[:7]
+                    validated.append(day_copy)
                 else:
-                    day_array.append(None)
+                    validated.append([None] * 7)
+            return validated
         else:
-            day_array = [None] * 7
-        timetable_array.append(day_array)
+            # Wrong number of days, rebuild
+            return [[None] * 7 for _ in range(5)]
     
-    return timetable_array
+    # If it's a dictionary, convert from dict format to array format
+    if isinstance(timetable_data, dict):
+        timetable_array = []
+        for day in range(1, 6):  # 5 days
+            day_array = []
+            # Try both integer and string keys since JSON converts int keys to strings
+            day_key = day if day in timetable_data else str(day)
+            
+            if day_key in timetable_data:
+                day_periods = timetable_data[day_key]
+                for period in range(1, 8):  # 7 periods
+                    if isinstance(day_periods, dict):
+                        # Try both int and string period keys
+                        period_value = day_periods.get(period)
+                        if period_value is None:
+                            period_value = day_periods.get(str(period))
+                        day_array.append(period_value)
+                    else:
+                        day_array.append(None)
+            else:
+                day_array = [None] * 7
+            timetable_array.append(day_array)
+        
+        return timetable_array
+    
+    # Fallback for unexpected formats
+    return [[None] * 7 for _ in range(5)]
 
 @app.route('/get-timetables', methods=['GET', 'POST'])
 def get_latest_timetables():
@@ -428,6 +637,68 @@ def get_latest_timetables():
         
     except Exception as e:
         logging.exception("Failed to retrieve timetables")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/get-my-timetable', methods=['GET'])
+def get_my_timetable():
+    """Get timetable for the logged-in faculty member from faculty_timetables table."""
+    try:
+        faculty_id = session.get('faculty_id')
+        college_id = session.get('college_id')
+        
+        if not faculty_id or not college_id:
+            return jsonify({'ok': False, 'error': 'Faculty not logged in'}), 401
+        
+        # Get faculty name for reference
+        faculty_record = Faculty.query.filter_by(faculty_id=faculty_id, college_id=college_id).first()
+        if not faculty_record:
+            return jsonify({'ok': False, 'error': 'Faculty record not found'}), 404
+        
+        # Get all timetables for this faculty across all sections and departments
+        faculty_timetables = FacultyTimetable.query.filter_by(
+            faculty_id=faculty_id,
+            college_id=college_id
+        ).all()
+        
+        if not faculty_timetables:
+            return jsonify({'ok': False, 'error': 'No timetables found for this faculty'}), 404
+        
+        # Organize timetables by section and department
+        timetables_by_dept = {}
+        
+        for ft in faculty_timetables:
+            dept_key = f"{ft.dept_name}"
+            if dept_key not in timetables_by_dept:
+                timetables_by_dept[dept_key] = {
+                    'dept_name': ft.dept_name,
+                    'sections': {}
+                }
+            
+            # Convert timetable to array format for frontend display
+            try:
+                timetable_array = convert_timetable_dict_to_array(ft.timetable)
+            except Exception as e:
+                logging.error(f"Error converting timetable for {faculty_record.faculty_name} section {ft.section}: {str(e)}")
+                timetable_array = [[None] * 7 for _ in range(5)]
+            
+            timetables_by_dept[dept_key]['sections'][ft.section] = {
+                'section': ft.section,
+                'timetable': timetable_array,
+                'created_at': ft.created_at.isoformat() if ft.created_at else None
+            }
+        
+        logging.info(f"Retrieved timetables for faculty {faculty_record.faculty_name} ({faculty_id})")
+        
+        return jsonify({
+            'ok': True,
+            'faculty_id': faculty_id,
+            'faculty_name': faculty_record.faculty_name,
+            'timetables_by_dept': timetables_by_dept,
+            'total_sections': sum(len(v['sections']) for v in timetables_by_dept.values())
+        }), 200
+        
+    except Exception as e:
+        logging.exception("Failed to retrieve faculty timetable")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/get-faculty-timetables', methods=['GET'])
@@ -958,6 +1229,14 @@ def login_faculty():
         ).first()
 
         if faculty and faculty.faculty_password == password:
+            # Set Flask session variables
+            session['faculty_id'] = faculty.faculty_id
+            session['college_id'] = faculty.college_id
+            session['faculty_name'] = faculty.faculty_name
+            session['dept_name'] = faculty.dept_name
+            session['designation'] = faculty.designation
+            session.permanent = True  # Make session persistent
+            
             # We already have dept_name in the faculty model
             dept_name = faculty.dept_name
 

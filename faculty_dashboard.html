@@ -72,10 +72,21 @@
     </div>
 
     <div class="main-content">
-        <!-- Additional dashboard content will go here -->
+        <div id="timetableContainer" style="display:none;">
+            <h3 style="color: #2c3e50; margin-bottom: 1rem;">My Timetable</h3>
+            <div id="deptTimetables" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem;"></div>
+        </div>
+        <div id="loadingMessage" style="text-align: center; padding: 2rem; color: #7f8c8d;">
+            Loading timetable...
+        </div>
+        <div id="errorMessage" style="display:none; background: #e74c3c; color: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;"></div>
     </div>
 
     <script>
+        // Days of week
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const periods = ['P1', 'P2', 'Break', 'P3', 'P4', 'Break', 'P5', 'P6', 'P7'];
+
         // Check if user is logged in
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
@@ -84,6 +95,7 @@
                 return;
             }
             displayFacultyInfo();
+            fetchFacultyTimetable();
         }
 
         // Display faculty information
@@ -93,6 +105,109 @@
             document.getElementById('deptName').textContent = sessionStorage.getItem('dept_name') || 'N/A';
             document.getElementById('designation').textContent = sessionStorage.getItem('designation') || 'N/A';
             document.getElementById('collegeId').textContent = sessionStorage.getItem('college_id') || 'N/A';
+        }
+
+        // Fetch faculty timetable from server
+        function fetchFacultyTimetable() {
+            fetch('/get-my-timetable', {
+                method: 'GET',
+                credentials: 'include',  // Include session cookies
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    showError('Session expired. Please login again.');
+                    setTimeout(() => window.location.href = 'faculty_login.html', 2000);
+                    return null;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data && data.ok) {
+                    displayTimetables(data);
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('timetableContainer').style.display = 'block';
+                } else if (data) {
+                    showError(data.error || 'Failed to load timetable');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error loading timetable: ' + error.message);
+            });
+        }
+
+        // Display timetables for each department and section
+        function displayTimetables(data) {
+            const container = document.getElementById('deptTimetables');
+            container.innerHTML = '';
+
+            Object.entries(data.timetables_by_dept).forEach(([deptKey, deptData]) => {
+                Object.entries(deptData.sections).forEach(([sectionName, sectionData]) => {
+                    const sectionDiv = createTimetableCard(
+                        deptData.dept_name,
+                        sectionName,
+                        sectionData.timetable
+                    );
+                    container.appendChild(sectionDiv);
+                });
+            });
+
+            if (container.innerHTML === '') {
+                showError('No timetables available');
+            }
+        }
+
+        // Create a timetable card for a section
+        function createTimetableCard(deptName, sectionName, timetable) {
+            const card = document.createElement('div');
+            card.style.cssText = 'background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+
+            let html = `<h4 style="color: #2c3e50; margin-top: 0;">${deptName} - Section ${sectionName}</h4>`;
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+            
+            // Header row
+            html += '<tr style="background: #ecf0f1;">';
+            html += '<th style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: left;">Day / Period</th>';
+            
+            for (let p = 0; p < 9; p++) {
+                const periodName = p === 2 || p === 5 ? 'Break' : `P${p < 2 ? p + 1 : p < 5 ? p : p - 1}`;
+                html += `<th style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: center; font-size: 0.85rem;">${periodName}</th>`;
+            }
+            html += '</tr>';
+
+            // Data rows
+            if (timetable && timetable.length > 0) {
+                timetable.forEach((dayData, dayIdx) => {
+                    html += `<tr>`;
+                    html += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; font-weight: 500; background: #f8f9fa;">${days[dayIdx]}</td>`;
+                    
+                    if (dayData && dayData.length > 0) {
+                        dayData.forEach(subject => {
+                            const cellBg = subject ? '#d5f4e6' : '#ffffff';
+                            const cellContent = subject ? `<strong>${subject}</strong>` : '-';
+                            html += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: center; background: ${cellBg}; font-size: 0.8rem;">${cellContent}</td>`;
+                        });
+                    }
+                    html += `</tr>`;
+                });
+            } else {
+                html += '<tr><td colspan="10" style="padding: 1rem; text-align: center; color: #95a5a6;">No classes scheduled</td></tr>';
+            }
+
+            html += '</table>';
+            card.innerHTML = html;
+            return card;
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('loadingMessage').style.display = 'none';
         }
 
         // Handle logout

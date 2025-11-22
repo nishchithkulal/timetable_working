@@ -138,6 +138,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'include',  // Include cookies/session in request
                     body: JSON.stringify(formData)
                 });
                 
@@ -147,15 +148,17 @@
                     messageDiv.style.color = 'green';
                     messageDiv.textContent = 'Login successful!';
                     
-                    // Store faculty info in session storage
+                    // Store faculty info in session storage for client-side access
                     sessionStorage.setItem('faculty_id', data.faculty_id);
                     sessionStorage.setItem('faculty_name', data.faculty_name);
                     sessionStorage.setItem('college_id', data.college_id);
                     sessionStorage.setItem('dept_name', data.dept_name);
                     sessionStorage.setItem('designation', data.designation);
                     
-                    // Redirect to dashboard
-                    window.location.href = 'faculty_dashboard.html';
+                    // Redirect to dashboard after a short delay
+                    setTimeout(() => {
+                        window.location.href = 'faculty_dashboard.html';
+                    }, 500);
                 } else {
                     messageDiv.style.color = 'red';
                     messageDiv.textContent = data.error || 'Login failed';
