@@ -74,7 +74,11 @@
     <div class="main-content">
         <div id="timetableContainer" style="display:none;">
             <h3 style="color: #2c3e50; margin-bottom: 1rem;">My Timetable</h3>
-            <div id="deptTimetables" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 2rem;"></div>
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <table id="timetableTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <!-- Table will be populated by JavaScript -->
+                </table>
+            </div>
         </div>
         <div id="loadingMessage" style="text-align: center; padding: 2rem; color: #7f8c8d;">
             Loading timetable...
@@ -126,7 +130,7 @@
             })
             .then(data => {
                 if (data && data.ok) {
-                    displayTimetables(data);
+                    displayTimetable(data.timetable);
                     document.getElementById('loadingMessage').style.display = 'none';
                     document.getElementById('timetableContainer').style.display = 'block';
                 } else if (data) {
@@ -139,67 +143,44 @@
             });
         }
 
-        // Display timetables for each department and section
-        function displayTimetables(data) {
-            const container = document.getElementById('deptTimetables');
-            container.innerHTML = '';
+        // Display timetable in 5x9 grid format
+        function displayTimetable(timetable) {
+            const table = document.getElementById('timetableTable');
+            table.innerHTML = '';
 
-            Object.entries(data.timetables_by_dept).forEach(([deptKey, deptData]) => {
-                Object.entries(deptData.sections).forEach(([sectionName, sectionData]) => {
-                    const sectionDiv = createTimetableCard(
-                        deptData.dept_name,
-                        sectionName,
-                        sectionData.timetable
-                    );
-                    container.appendChild(sectionDiv);
-                });
-            });
-
-            if (container.innerHTML === '') {
-                showError('No timetables available');
-            }
-        }
-
-        // Create a timetable card for a section
-        function createTimetableCard(deptName, sectionName, timetable) {
-            const card = document.createElement('div');
-            card.style.cssText = 'background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
-
-            let html = `<h4 style="color: #2c3e50; margin-top: 0;">${deptName} - Section ${sectionName}</h4>`;
-            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
-            
-            // Header row
-            html += '<tr style="background: #ecf0f1;">';
-            html += '<th style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: left;">Day / Period</th>';
+            // Header row with period names
+            let headerHtml = '<tr style="background: #ecf0f1;">';
+            headerHtml += '<th style="padding: 0.75rem; border: 1px solid #bdc3c7; text-align: left; font-weight: 600;">Day / Period</th>';
             
             for (let p = 0; p < 9; p++) {
                 const periodName = p === 2 || p === 5 ? 'Break' : `P${p < 2 ? p + 1 : p < 5 ? p : p - 1}`;
-                html += `<th style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: center; font-size: 0.85rem;">${periodName}</th>`;
+                headerHtml += `<th style="padding: 0.75rem; border: 1px solid #bdc3c7; text-align: center; font-weight: 600;">${periodName}</th>`;
             }
-            html += '</tr>';
+            headerHtml += '</tr>';
+            table.innerHTML += headerHtml;
 
-            // Data rows
+            // Data rows for each day
             if (timetable && timetable.length > 0) {
                 timetable.forEach((dayData, dayIdx) => {
-                    html += `<tr>`;
-                    html += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; font-weight: 500; background: #f8f9fa;">${days[dayIdx]}</td>`;
+                    let dayHtml = '<tr>';
+                    dayHtml += `<td style="padding: 0.75rem; border: 1px solid #bdc3c7; font-weight: 600; background: #f8f9fa; text-align: center;">${days[dayIdx]}</td>`;
                     
                     if (dayData && dayData.length > 0) {
-                        dayData.forEach(subject => {
-                            const cellBg = subject ? '#d5f4e6' : '#ffffff';
-                            const cellContent = subject ? `<strong>${subject}</strong>` : '-';
-                            html += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; text-align: center; background: ${cellBg}; font-size: 0.8rem;">${cellContent}</td>`;
+                        dayData.forEach((subject, periodIdx) => {
+                            const isBreak = periodIdx === 2 || periodIdx === 5;
+                            const cellBg = isBreak ? '#ecf0f1' : (subject ? '#d5f4e6' : '#ffffff');
+                            const cellContent = subject ? `<small>${subject}</small>` : '-';
+                            const cellStyle = isBreak ? 'text-align: center; font-size: 0.75rem; color: #95a5a6;' : 'text-align: center; font-size: 0.85rem;';
+                            
+                            dayHtml += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; background: ${cellBg}; ${cellStyle}">${cellContent}</td>`;
                         });
                     }
-                    html += `</tr>`;
+                    dayHtml += '</tr>';
+                    table.innerHTML += dayHtml;
                 });
             } else {
-                html += '<tr><td colspan="10" style="padding: 1rem; text-align: center; color: #95a5a6;">No classes scheduled</td></tr>';
+                table.innerHTML += '<tr><td colspan="10" style="padding: 1rem; text-align: center; color: #95a5a6;">No classes scheduled</td></tr>';
             }
-
-            html += '</table>';
-            card.innerHTML = html;
-            return card;
         }
 
         // Show error message

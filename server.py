@@ -278,6 +278,8 @@ with app.app_context():
 def extract_faculty_timetables(section_timetables, faculties, subjects_per_section, dept_name, college_id):
     """Extract individual faculty timetables from section timetables.
     
+    Returns a combined timetable (5 days × 9 periods) for each faculty showing all their classes.
+    
     Args:
         section_timetables: {section: {day: {period: subject}}}
         faculties: {subject_name: faculty_name}
@@ -286,7 +288,7 @@ def extract_faculty_timetables(section_timetables, faculties, subjects_per_secti
         college_id: College ID
     
     Returns:
-        {faculty_name: {section: {day: {period: subject}}}}
+        {faculty_name: [[...5 days...]]}  - 2D array format
     """
     faculty_timetables = {}
     
@@ -306,25 +308,29 @@ def extract_faculty_timetables(section_timetables, faculties, subjects_per_secti
                 if not faculty_name:
                     continue
                 
-                # Initialize faculty timetable if not exists
+                # Initialize faculty timetable if not exists (as 5x9 2D array)
                 if faculty_name not in faculty_timetables:
-                    faculty_timetables[faculty_name] = {}
-                
-                if section not in faculty_timetables[faculty_name]:
-                    # Create empty timetable structure for this faculty-section combination
-                    faculty_timetables[faculty_name][section] = {}
-                    for d in range(1, 6):  # 5 days
-                        faculty_timetables[faculty_name][section][d] = {}
-                        for p in range(1, 8):  # 7 periods
-                            faculty_timetables[faculty_name][section][d][p] = None
+                    # Create 5 days × 9 periods array
+                    faculty_timetables[faculty_name] = [
+                        [None] * 9 for _ in range(5)
+                    ]
                 
                 # Add this subject to the faculty's timetable
-                if day not in faculty_timetables[faculty_name][section]:
-                    faculty_timetables[faculty_name][section][day] = {}
+                # day is 1-5, period is 1-7, but we need to map to array indices (0-4) and (0-8)
+                day_idx = day - 1
+                period_idx = period - 1
                 
-                faculty_timetables[faculty_name][section][day][period] = subject
+                # Get current content
+                current = faculty_timetables[faculty_name][day_idx][period_idx]
+                
+                # If slot is empty, add subject; if it has content, combine with section info
+                if current is None:
+                    faculty_timetables[faculty_name][day_idx][period_idx] = f"{subject}\n(Sec {section})"
+                else:
+                    # Multiple classes at same time (shouldn't happen, but handle it)
+                    faculty_timetables[faculty_name][day_idx][period_idx] += f"\n{subject}\n(Sec {section})"
     
-    logging.info(f"Extracted {len(faculty_timetables)} faculty timetables")
+    logging.info(f"Extracted {len(faculty_timetables)} faculty timetables (combined format)")
     return faculty_timetables
 
 def build_timetable_data_from_db(dept_name: str, college_id: str):
@@ -480,7 +486,7 @@ def generate_timetable():
             
             # Store faculty timetables
             faculty_ids = []
-            for faculty_name, faculty_tt_data in faculty_timetables.items():
+            for faculty_name, timetable in faculty_timetables.items():
                 # Get faculty_id from Faculty table
                 faculty_record = Faculty.query.filter_by(faculty_name=faculty_name, college_id=college_id).first()
                 if not faculty_record:
@@ -489,18 +495,18 @@ def generate_timetable():
                 
                 faculty_id = faculty_record.faculty_id
                 
-                for section, timetable in faculty_tt_data.items():
-                    new_faculty_tt = FacultyTimetable(
-                        college_id=college_id,
-                        dept_name=dept_name,
-                        section=section,
-                        faculty_id=faculty_id,
-                        faculty_name=faculty_name,
-                        timetable=timetable
-                    )
-                    db.session.add(new_faculty_tt)
-                    db.session.flush()
-                    faculty_ids.append(new_faculty_tt.id)
+                # Store as a single combined timetable (not section-wise)
+                new_faculty_tt = FacultyTimetable(
+                    college_id=college_id,
+                    dept_name=dept_name,
+                    section='ALL',  # Mark as combined timetable
+                    faculty_id=faculty_id,
+                    faculty_name=faculty_name,
+                    timetable=timetable
+                )
+                db.session.add(new_faculty_tt)
+                db.session.flush()
+                faculty_ids.append(new_faculty_tt.id)
             
             db.session.commit()
             logging.info("Inserted faculty timetables with ids=%s", faculty_ids)
@@ -641,7 +647,7 @@ def get_latest_timetables():
 
 @app.route('/get-my-timetable', methods=['GET'])
 def get_my_timetable():
-    """Get timetable for the logged-in faculty member from faculty_timetables table."""
+    """Get combined timetable for the logged-in faculty member from faculty_timetables table."""
     try:
         faculty_id = session.get('faculty_id')
         college_id = session.get('college_id')
@@ -654,47 +660,33 @@ def get_my_timetable():
         if not faculty_record:
             return jsonify({'ok': False, 'error': 'Faculty record not found'}), 404
         
-        # Get all timetables for this faculty across all sections and departments
-        faculty_timetables = FacultyTimetable.query.filter_by(
+        # Get timetable for this faculty (should have section='ALL' for combined timetable)
+        faculty_timetable = FacultyTimetable.query.filter_by(
             faculty_id=faculty_id,
-            college_id=college_id
-        ).all()
+            college_id=college_id,
+            section='ALL'
+        ).first()
         
-        if not faculty_timetables:
-            return jsonify({'ok': False, 'error': 'No timetables found for this faculty'}), 404
+        if not faculty_timetable:
+            return jsonify({'ok': False, 'error': 'No timetable found for this faculty'}), 404
         
-        # Organize timetables by section and department
-        timetables_by_dept = {}
+        # The timetable is already in 2D array format from storage
+        timetable = faculty_timetable.timetable
+        if isinstance(timetable, list):
+            # Already in array format
+            timetable_array = timetable
+        else:
+            # Convert if needed
+            timetable_array = convert_timetable_dict_to_array(timetable)
         
-        for ft in faculty_timetables:
-            dept_key = f"{ft.dept_name}"
-            if dept_key not in timetables_by_dept:
-                timetables_by_dept[dept_key] = {
-                    'dept_name': ft.dept_name,
-                    'sections': {}
-                }
-            
-            # Convert timetable to array format for frontend display
-            try:
-                timetable_array = convert_timetable_dict_to_array(ft.timetable)
-            except Exception as e:
-                logging.error(f"Error converting timetable for {faculty_record.faculty_name} section {ft.section}: {str(e)}")
-                timetable_array = [[None] * 7 for _ in range(5)]
-            
-            timetables_by_dept[dept_key]['sections'][ft.section] = {
-                'section': ft.section,
-                'timetable': timetable_array,
-                'created_at': ft.created_at.isoformat() if ft.created_at else None
-            }
-        
-        logging.info(f"Retrieved timetables for faculty {faculty_record.faculty_name} ({faculty_id})")
+        logging.info(f"Retrieved combined timetable for faculty {faculty_record.faculty_name} ({faculty_id})")
         
         return jsonify({
             'ok': True,
             'faculty_id': faculty_id,
             'faculty_name': faculty_record.faculty_name,
-            'timetables_by_dept': timetables_by_dept,
-            'total_sections': sum(len(v['sections']) for v in timetables_by_dept.values())
+            'dept_name': faculty_record.dept_name,
+            'timetable': timetable_array
         }), 200
         
     except Exception as e:
