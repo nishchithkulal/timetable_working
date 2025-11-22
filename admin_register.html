@@ -1,0 +1,204 @@
+<!-- admin_register.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Register</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            width: 100%;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        label {
+            color: #2c3e50;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        input::placeholder {
+            color: #bbb;
+            font-size: 0.9rem;
+        }
+        input:hover {
+            border-color: #bbb;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .message {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Admin Registration</h2>
+        <form id="registerForm">
+
+            <div class="form-group">
+                <label for="admin_name">Admin Name</label>
+                <input id="admin_name" name="admin_name" type="text" required placeholder="Enter your name" />
+            </div>
+
+            <div class="form-group">
+                <label for="college_name">College Name</label>
+                <input id="college_name" name="college_name" type="text" required placeholder="Enter college name" />
+            </div>
+
+            <div class="form-group">
+                <label for="college_id">College ID</label>
+                <input id="college_id" name="college_id" type="text" required placeholder="Enter college ID" />
+            </div>
+
+            <div class="form-group">
+                <label for="admin_password">Password</label>
+                <input id="admin_password" name="admin_password" type="password" required
+                    minlength="6" placeholder="At least 6 characters" />
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                <input id="confirm_password" name="confirm_password" type="password" required
+                    minlength="6" placeholder="Re-enter password" />
+            </div>
+
+            <div id="message" class="message"></div>
+
+            <button type="submit">Register</button>
+            
+            <p class="message">
+                Already registered? <a href="admin_login.html">Login here</a>
+            </p>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById('registerForm');
+        const messageDiv = document.getElementById('message');
+        const passwordInput = form.querySelector('input[name="admin_password"]');
+        const confirmInput = form.querySelector('input[name="confirm_password"]');
+
+        // Real-time password matching check
+        function checkPasswords() {
+            if (confirmInput.value && passwordInput.value !== confirmInput.value) {
+                messageDiv.style.color = 'red';
+                messageDiv.textContent = 'Passwords do not match!';
+                return false;
+            }
+            if (confirmInput.value && passwordInput.value === confirmInput.value) {
+                messageDiv.style.color = 'green';
+                messageDiv.textContent = 'Passwords match!';
+                return true;
+            }
+            messageDiv.textContent = '';
+            return false;
+        }
+
+        passwordInput.addEventListener('input', checkPasswords);
+        confirmInput.addEventListener('input', checkPasswords);
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            // Final password match check
+            if (!checkPasswords()) {
+                return;
+            }
+            
+            // Remove confirm_password before sending to server
+            formData.delete('confirm_password');
+            
+            try {
+                const response = await fetch('/admin/register', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.style.color = 'green';
+                    messageDiv.textContent = data.message;
+                    // Redirect to login page after successful registration
+                    setTimeout(() => {
+                        window.location.href = 'admin_login.html';
+                    }, 2000);
+                } else {
+                    messageDiv.style.color = 'red';
+                    messageDiv.textContent = data.error || 'Registration failed';
+                }
+            } catch (error) {
+                messageDiv.style.color = 'red';
+                messageDiv.textContent = 'Error connecting to server';
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

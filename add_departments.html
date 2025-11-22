@@ -1,0 +1,569 @@
+<!-- add_departments.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Departments</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 80px auto 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .add-section-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .add-section-btn:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .remove-section-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .remove-section-btn:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+
+        .submit-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+
+        /* App Bar Styles */
+        .app-bar {
+            background: #3498db;
+            color: white;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-bar h1 {
+            margin: 0;
+            font-size: 20px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <button class="back-btn" onclick="window.location.href='/admin_dashboard.html'">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <h1>Add Department</h1>
+        <div style="width: 48px;"></div> <!-- Spacer for centering -->
+    </div>
+
+    <div class="container">
+        <form id="departmentForm" onsubmit="submitForm(event)">
+            <div class="form-group">
+                <label for="departmentName">Department Name:</label>
+                <input type="text" id="departmentName" name="departmentName" required>
+            </div>
+
+            <div class="form-group">
+                <label>Sections:</label>
+                <div id="sectionsContainer">
+                    <div class="input-group">
+                        <input type="text" name="sections[]" placeholder="Section Name" required>
+                        <button type="button" class="add-section-btn" onclick="addSection()">
+                            <span class="material-icons">add_circle</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Add Department</button>
+        </form>
+
+        <div class="existing-departments" style="margin-top: 40px;">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">Existing Departments</h2>
+            <div id="departmentsContainer">
+                <p style="text-align: center; color: #666;">Loading departments...</p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .department-card {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .department-name {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .section-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .department-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .department-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-btn {
+            color: #3498db;
+        }
+
+        .edit-btn:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .delete-btn {
+            color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+
+        .section-tag-container {
+            display: inline-flex;
+            align-items: center;
+            background: #3498db;
+            border-radius: 15px;
+            padding: 4px 12px;
+            margin: 2px;
+        }
+
+        .section-tag {
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .delete-section-btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0;
+            margin-left: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            opacity: 0.7;
+        }
+
+        .delete-section-btn:hover {
+            opacity: 1;
+        }
+
+        .delete-section-btn .material-icons {
+            font-size: 16px;
+        }
+
+        .no-departments {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+    </style>
+
+    <script>
+        // Load departments when the page loads
+        window.onload = loadDepartments;
+
+        function addSection() {
+            const container = document.getElementById('sectionsContainer');
+            const inputGroup = document.createElement('div');
+            inputGroup.className = 'input-group';
+            
+            inputGroup.innerHTML = `
+                <input type="text" name="sections[]" placeholder="Section Name" required>
+                <button type="button" class="remove-section-btn" onclick="removeSection(this)">
+                    <span class="material-icons">remove_circle</span>
+                </button>
+            `;
+            
+            container.appendChild(inputGroup);
+        }
+
+        function removeSection(button) {
+            button.parentElement.remove();
+        }
+
+        // Function to get college_id from session storage
+        function getCollegeId() {
+            return sessionStorage.getItem('college_id');
+        }
+
+        async function loadDepartments() {
+            const college_id = getCollegeId();
+            if (!college_id) {
+                window.location.href = '/admin_login.html';
+                return;
+            }
+
+            const container = document.getElementById('departmentsContainer');
+            
+            try {
+                const response = await fetch(`/get-departments?college_id=${college_id}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch departments');
+                }
+
+                if (!data.departments || data.departments.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-departments">
+                            <p>No departments added yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort departments alphabetically
+                data.departments.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Create HTML for departments
+                const departmentsHTML = data.departments.map(dept => `
+                    <div class="department-card" id="dept-${dept.id}">
+                        <div class="department-header">
+                            <div class="department-name" onclick="startEditingDepartment(${dept.id}, '${dept.name}')">${dept.name}</div>
+                            <div class="department-actions">
+                                <button class="action-btn edit-btn" onclick="startEditingDepartment(${dept.id}, '${dept.name}')">
+                                    <span class="material-icons">edit</span>
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteDepartment(${dept.id})">
+                                    <span class="material-icons">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="section-tags">
+                            ${dept.sections.map((section, index) => `
+                                <div class="section-tag-container">
+                                    <span class="section-tag" onclick="startEditingSection(${dept.id}, ${index}, '${section}')">${section}</span>
+                                    <button class="delete-section-btn" onclick="deleteSection(${dept.id}, ${index})">
+                                        <span class="material-icons">close</span>
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = departmentsHTML;
+
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="no-departments">
+                        <p>Error loading departments. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function startEditingDepartment(deptId, currentName) {
+            const newName = prompt('Enter new department name:', currentName);
+            if (newName && newName !== currentName) {
+                updateDepartment(deptId, newName);
+            }
+        }
+
+        function startEditingSection(deptId, sectionIndex, currentName) {
+            const newName = prompt('Enter new section name:', currentName);
+            if (newName && newName !== currentName) {
+                updateSection(deptId, sectionIndex, newName);
+            }
+        }
+
+        async function updateDepartment(deptId, newName) {
+            try {
+                const response = await fetch(`/department/${deptId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await loadDepartments();
+                } else {
+                    alert(data.error || 'Failed to update department');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating department');
+            }
+        }
+
+        async function updateSection(deptId, sectionIndex, newName) {
+            try {
+                const deptCard = document.getElementById(`dept-${deptId}`);
+                const deptName = deptCard.querySelector('.department-name').textContent;
+                const currentSections = Array.from(deptCard.querySelectorAll('.section-tag')).map(tag => tag.textContent);
+                currentSections[sectionIndex] = newName;
+
+                const response = await fetch(`/department/${deptId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: deptName,
+                        sections: currentSections
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await loadDepartments();
+                } else {
+                    alert(data.error || 'Failed to update section');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating section');
+            }
+        }
+
+        async function deleteSection(deptId, sectionIndex) {
+            if (!confirm('Are you sure you want to delete this section?')) return;
+
+            try {
+                const deptCard = document.getElementById(`dept-${deptId}`);
+                const deptName = deptCard.querySelector('.department-name').textContent;
+                const currentSections = Array.from(deptCard.querySelectorAll('.section-tag')).map(tag => tag.textContent);
+                currentSections.splice(sectionIndex, 1);
+
+                if (currentSections.length === 0) {
+                    alert('Department must have at least one section');
+                    return;
+                }
+
+                const response = await fetch(`/department/${deptId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: deptName,
+                        sections: currentSections
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await loadDepartments();
+                } else {
+                    alert(data.error || 'Failed to delete section');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting section');
+            }
+        }
+
+        async function deleteDepartment(deptId) {
+            const confirmDelete = confirm(
+                'Are you sure you want to delete this department?\n\n' +
+                'Note: You cannot delete a department if it has:\n' +
+                '- Associated subjects\n' +
+                '- Faculty members assigned to it\n\n' +
+                'Please remove or reassign all subjects and faculty members first.'
+            );
+            
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`/department/${deptId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Department deleted successfully!');
+                    await loadDepartments();
+                } else {
+                    // Show a detailed error message
+                    alert(data.error || 'Failed to delete department. Make sure there are no subjects or faculty members associated with this department.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting department');
+            }
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            
+            const college_id = getCollegeId();
+            if (!college_id) {
+                window.location.href = '/admin_login.html';
+                return;
+            }
+
+            const departmentName = document.getElementById('departmentName').value;
+            const sectionInputs = document.getElementsByName('sections[]');
+            const sections = Array.from(sectionInputs).map(input => input.value);
+
+            try {
+                const response = await fetch('/add-department', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        departmentName,
+                        sections,
+                        college_id
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Clear the form
+                    document.getElementById('departmentForm').reset();
+                    // Keep only one section input
+                    const container = document.getElementById('sectionsContainer');
+                    container.innerHTML = `
+                        <div class="input-group">
+                            <input type="text" name="sections[]" placeholder="Section Name" required>
+                            <button type="button" class="add-section-btn" onclick="addSection()">
+                                <span class="material-icons">add_circle</span>
+                            </button>
+                        </div>
+                    `;
+                    // Reload departments
+                    await loadDepartments();
+                    alert('Department added successfully!');
+                } else {
+                    alert(data.error || 'Failed to add department');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error adding department');
+            }
+        }
+    </script>
+</body>
+</html>

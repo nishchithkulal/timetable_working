@@ -1,0 +1,629 @@
+<!-- add_faculty.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Faculty</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 80px auto 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* App Bar Styles */
+        .app-bar {
+            background: #3498db;
+            color: white;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-bar h1 {
+            margin: 0;
+            font-size: 20px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+
+        .add-section-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <div class="app-bar">
+        <button class="back-btn" onclick="window.location.href='/admin_dashboard.html'">
+            <span class="material-icons">arrow_back</span>
+        </button>
+        <h1>Add Faculty</h1>
+        <div style="width: 48px;"></div> <!-- Spacer for centering -->
+    </div>
+
+    <div class="container">
+        <form id="facultyForm" onsubmit="submitForm(event)">
+            <div class="form-group">
+                <label for="faculty_id">Faculty ID:</label>
+                <input type="text" id="faculty_id" name="faculty_id" required>
+            </div>
+
+            <div class="form-group">
+                <label for="faculty_name">Faculty Name:</label>
+                <input type="text" id="faculty_name" name="faculty_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="designation">Designation:</label>
+                <select id="designation" name="designation" required>
+                    <option value="">Select Designation</option>
+                    <option value="HOD">HOD</option>
+                    <option value="DEAN">DEAN</option>
+                    <option value="PRINCIPAL">PRINCIPAL</option>
+                    <option value="PROFESSOR">PROFESSOR</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="dept_name">Department Name:</label>
+                <select id="dept_name" name="dept_name" required>
+                    <option value="">Select Department</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="faculty_password">Password:</label>
+                <input type="password" id="faculty_password" name="faculty_password" required>
+            </div>
+
+            <button type="submit" class="submit-btn">Add Faculty</button>
+        </form>
+
+        <div id="message" style="margin-top: 20px; text-align: center;"></div>
+
+        <div class="existing-faculty" style="margin-top: 40px;">
+            <h2 style="color: #2c3e50; margin-bottom: 20px;">Existing Faculty</h2>
+            <div id="facultyContainer">
+                <p style="text-align: center; color: #666;">Loading faculty members...</p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .faculty-card {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .faculty-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .faculty-name {
+            font-size: 18px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .faculty-details {
+            margin-top: 10px;
+            color: #666;
+        }
+
+        .faculty-detail {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            width: 120px;
+            color: #2c3e50;
+        }
+
+        .faculty-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-btn {
+            color: #3498db;
+        }
+
+        .edit-btn:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .delete-btn {
+            color: #e74c3c;
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+
+        select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .submit-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+            
+        }
+
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+
+    <script>
+        // Load departments and faculty when the page loads
+        window.onload = function() {
+            const college_id = sessionStorage.getItem('college_id');
+            if (!college_id) {
+                window.location.href = '/admin_login.html';
+                return;
+            }
+            loadDepartments();
+            loadFaculty();
+        };
+
+        async function loadDepartments() {
+            const college_id = sessionStorage.getItem('college_id');
+            try {
+                const response = await fetch(`/get-departments?college_id=${college_id}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch departments');
+                }
+
+                const deptSelect = document.getElementById('dept_name');
+                deptSelect.innerHTML = '<option value="">Select Department</option>';
+
+                data.departments.sort((a, b) => a.name.localeCompare(b.name));
+                data.departments.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.name;
+                    option.textContent = dept.name;
+                    deptSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('message').innerHTML = `
+                    <div style="color: red;">Error loading departments. Please try again later.</div>
+                `;
+            }
+        }
+
+        async function loadFaculty() {
+            const college_id = sessionStorage.getItem('college_id');
+            if (!college_id) {
+                window.location.href = '/admin_login.html';
+                return;
+            }
+
+            const container = document.getElementById('facultyContainer');
+            
+            try {
+                const response = await fetch(`/get-faculty?college_id=${college_id}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch faculty');
+                }
+
+                if (!data.faculty || data.faculty.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-faculty" style="text-align: center; padding: 20px; color: #666; background: #f8f9fa; border-radius: 6px;">
+                            <p>No faculty members added yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort faculty alphabetically by name
+                data.faculty.sort((a, b) => a.faculty_name.localeCompare(b.faculty_name));
+
+                // Create HTML for faculty members
+                const facultyHTML = data.faculty.map(faculty => `
+                    <div class="faculty-card" id="faculty-${faculty.faculty_id}">
+                        <div class="faculty-header">
+                            <div class="faculty-name">${faculty.faculty_name}</div>
+                            <div class="faculty-actions">
+                                <button class="action-btn edit-btn" onclick="startEditingFaculty('${faculty.faculty_id}')">
+                                    <span class="material-icons">edit</span>
+                                </button>
+                                <button class="action-btn delete-btn" onclick="deleteFaculty('${faculty.faculty_id}')">
+                                    <span class="material-icons">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="faculty-details">
+                            <div class="faculty-detail">
+                                <span class="detail-label">Faculty ID:</span>
+                                <span>${faculty.faculty_id}</span>
+                            </div>
+                            <div class="faculty-detail">
+                                <span class="detail-label">Department:</span>
+                                <span>${faculty.dept_name}</span>
+                            </div>
+                            <div class="faculty-detail">
+                                <span class="detail-label">Designation:</span>
+                                <span>${faculty.designation}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = facultyHTML;
+
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="no-faculty">
+                        <p>Error loading faculty members. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function createEditDialog(faculty, departments) {
+            const dialog = document.createElement('div');
+            dialog.className = 'edit-dialog';
+            dialog.innerHTML = `
+                <div class="edit-dialog-content">
+                    <h3>Edit Faculty Details</h3>
+                    <div class="form-group">
+                        <label for="edit_faculty_name">Faculty Name:</label>
+                        <input type="text" id="edit_faculty_name" value="${faculty.faculty_name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_designation">Designation:</label>
+                        <select id="edit_designation" required>
+                            <option value="HOD" ${faculty.designation === 'HOD' ? 'selected' : ''}>HOD</option>
+                            <option value="DEAN" ${faculty.designation === 'DEAN' ? 'selected' : ''}>DEAN</option>
+                            <option value="PRINCIPAL" ${faculty.designation === 'PRINCIPAL' ? 'selected' : ''}>PRINCIPAL</option>
+                            <option value="PROFESSOR" ${faculty.designation === 'PROFESSOR' ? 'selected' : ''}>PROFESSOR</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_dept_name">Department:</label>
+                        <select id="edit_dept_name" required>
+                            ${departments.map(dept => `
+                                <option value="${dept.name}" ${faculty.dept_name === dept.name ? 'selected' : ''}>
+                                    ${dept.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_faculty_password">New Password (leave blank to keep current):</label>
+                        <input type="password" id="edit_faculty_password">
+                    </div>
+                    <div class="dialog-buttons">
+                        <button type="button" class=" save-btn">Save Changes</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            // Add styles for the dialog
+            const style = document.createElement('style');
+            style.textContent = `
+                .edit-dialog {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                }
+                .edit-dialog-content {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    width: 90%;
+                    max-width: 500px;
+                }
+                .dialog-buttons {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                }
+                .dialog-buttons {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    align-items: stretch;
+                    height: 40px;
+                }
+                .save-btn, .cancel-btn {
+                    flex: 1;
+                    height: 100%;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    min-width: 120px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    line-height: 1;
+                }
+                .save-btn {
+                    background: #3498db;
+                    color: white;
+                    margin: 10;  /* Override any margin from submit-btn */
+                }
+                .save-btn:hover {
+                    background: #2980b9;
+                }
+                .cancel-btn {
+                    background: #e74c3c;
+                    color: white;
+                }
+                .cancel-btn:hover {
+                    background: #c0392b;
+                }
+            `;
+            document.head.appendChild(style);
+
+            return dialog;
+        }
+
+        async function startEditingFaculty(facultyId) {
+            const college_id = sessionStorage.getItem('college_id');
+            if (!college_id) return;
+
+            try {
+                // Fetch faculty details and departments in parallel
+                const [facultyResponse, departmentsResponse] = await Promise.all([
+                    fetch(`/get-faculty/${facultyId}`),
+                    fetch(`/get-departments?college_id=${college_id}`)
+                ]);
+
+                const facultyData = await facultyResponse.json();
+                const departmentsData = await departmentsResponse.json();
+
+                if (!facultyResponse.ok) throw new Error(facultyData.error);
+                if (!departmentsResponse.ok) throw new Error(departmentsData.error);
+
+                const faculty = facultyData.faculty;
+                const departments = departmentsData.departments;
+
+                // Create and show edit dialog
+                const dialog = createEditDialog(faculty, departments);
+                document.body.appendChild(dialog);
+
+                // Handle dialog buttons
+                const saveBtn = dialog.querySelector('.save-btn');
+                const cancelBtn = dialog.querySelector('.cancel-btn');
+
+                cancelBtn.onclick = () => {
+                    document.body.removeChild(dialog);
+                };
+
+                saveBtn.onclick = async () => {
+                    const updatedData = {
+                        faculty_name: dialog.querySelector('#edit_faculty_name').value,
+                        designation: dialog.querySelector('#edit_designation').value,
+                        dept_name: dialog.querySelector('#edit_dept_name').value
+                    };
+
+                    const newPassword = dialog.querySelector('#edit_faculty_password').value;
+                    if (newPassword) {
+                        updatedData.faculty_password = newPassword;
+                    }
+
+                    try {
+                        const updateResponse = await fetch(`/faculty/${facultyId}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(updatedData)
+                        });
+
+                        const updateData = await updateResponse.json();
+                        
+                        if (updateResponse.ok) {
+                            document.body.removeChild(dialog);
+                            await loadFaculty();
+                        } else {
+                            alert(updateData.error || 'Failed to update faculty');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error updating faculty');
+                    }
+                };
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error loading faculty details');
+            }
+        }
+
+        async function deleteFaculty(facultyId) {
+            if (!confirm('Are you sure you want to delete this faculty member?')) return;
+
+            try {
+                const response = await fetch(`/faculty/${facultyId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    await loadFaculty();
+                } else {
+                    alert(data.error || 'Failed to delete faculty');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting faculty');
+            }
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            
+            const college_id = sessionStorage.getItem('college_id');
+            if (!college_id) {
+                window.location.href = '/admin_login.html';
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const facultyData = {
+                faculty_id: formData.get('faculty_id'),
+                faculty_name: formData.get('faculty_name'),
+                designation: formData.get('designation'),
+                dept_name: formData.get('dept_name'),
+                faculty_password: formData.get('faculty_password'),
+                college_id: college_id
+            };
+
+            try {
+                const response = await fetch('/add-faculty', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(facultyData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('message').innerHTML = `
+                        <div style="color: green;">${data.message}</div>
+                    `;
+                    document.getElementById('facultyForm').reset();
+                    await loadFaculty();  // Reload faculty list
+                } else {
+                    document.getElementById('message').innerHTML = `
+                        <div style="color: red;">${data.error}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('message').innerHTML = `
+                    <div style="color: red;">Error adding faculty. Please try again later.</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

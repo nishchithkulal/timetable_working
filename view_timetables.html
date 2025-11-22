@@ -1,0 +1,725 @@
+<!-- view_timetables.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Timetables</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #3498db;
+            color: white;
+            padding: 16px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .back-btn {
+            background: none;
+            border: 1px solid white;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .back-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .main-content {
+            margin-top: 80px;
+            padding: 20px 20px 0 20px;
+            max-width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        #facultyView {
+            background: #f5f5f5;
+            margin: 20px 0 0 0;
+            padding: 20px;
+            width: 100%;
+        }
+
+        #allFacultyTimetablesContainer {
+            display: block;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .department-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #sectionView {
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .section-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .section-btn {
+            padding: 8px 16px;
+            border: none;
+            background: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .section-btn:hover {
+            background: #2980b9;
+        }
+
+        .section-btn.active {
+            background: #2c3e50;
+        }
+
+        .timetable {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            margin: 0;
+            box-sizing: border-box;
+            table-layout: fixed;
+        }
+
+        .timetable th, .timetable td {
+            border: 1px solid #ddd;
+            padding: 8px 4px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+
+        .timetable th {
+            background: #f5f5f5;
+        }
+
+        .timetable .lab {
+            background-color: #e8f5e9;
+        }
+
+        .subject-info {
+            font-size: 0.75em;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 2px;
+            line-height: 1.2;
+        }
+
+        .lab {
+            background-color: #e8f5e9;
+        }
+
+        td {
+            vertical-align: middle;
+            text-align: center;
+            height: auto;
+            padding: 8px 4px;
+        }
+
+        .timetable th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            padding: 8px 4px;
+            color: #2c3e50;
+            font-size: 0.85em;
+        }
+
+        .break-header {
+            background-color: #fff9c4;
+            font-weight: bold;
+            color: #f57f17;
+            font-size: 0.75em;
+        }
+
+        .break-cell {
+            background-color: #fff9c4;
+            color: #f57f17;
+            font-weight: bold;
+            padding: 8px 4px;
+            font-size: 0.7em;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .toggle-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #7f8c8d;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background: #6c7a7d;
+        }
+
+        .toggle-btn.active {
+            background: #2c3e50;
+        }
+
+        .faculty-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .faculty-selector label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .faculty-selector select {
+            padding: 8px 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .alert {
+            background: #fff3cd;
+            color: #856404;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #ffeaa7;
+            margin-bottom: 20px;
+        }
+
+        .faculty-timetable-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            page-break-inside: avoid;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .faculty-timetable-card h3 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 8px;
+            margin: 0 0 10px 0;
+        }
+
+        .faculty-timetable-card .timetable {
+            width: 100%;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <button onclick="goBack()" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            Back to Dashboard
+        </button>
+        <h1 id="deptTitle" style="margin: 0; font-size: 20px;">Department Timetables</h1>
+        <div style="width: 100px;"></div> <!-- For layout balance -->
+    </header>
+
+    <main class="main-content">
+        <div class="department-info">
+            <h2 id="deptName">Department: Loading...</h2>
+            <p id="collegeInfo">College: Loading...</p>
+        </div>
+
+        <div class="view-toggle">
+            <button onclick="switchView('section')" class="toggle-btn active" id="sectionViewBtn">Section Timetables</button>
+            <button onclick="switchView('faculty')" class="toggle-btn" id="facultyViewBtn">Faculty Timetables</button>
+        </div>
+
+        <div id="sectionView">
+            <div class="section-selector" id="sectionButtons">
+                <!-- Section buttons will be added here -->
+            </div>
+        </div>
+
+        <div id="facultyView" style="display: none;">
+            <div id="allFacultyTimetablesContainer">
+                <!-- All faculty timetables will be displayed here -->
+            </div>
+        </div>
+
+        <div id="timetableContainer">
+            <!-- Timetable will be displayed here -->
+        </div>
+    </main>
+
+    <script>
+        // Global variables to store data
+        let currentSectionTimetables = {};
+        let currentFacultyTimetables = {};
+        let currentView = 'section'; // 'section' or 'faculty'
+        let deptName, collegeId, collegeName;
+
+        // Lab subjects that should be highlighted (from algorithm.py)
+        const labSubjects = new Set([
+            'R', 'SCR', 'DSA LAB', 'OS Lab', 'JAVA Lab', 'DDCO Lab',
+            'MC1', 'MC2', 'SET', 'MP', 'PROJECT', 'OODPL LAB', 'CNM Lab',
+            'RPA Lab', 'PC Lab'
+        ]);
+
+        // Get department info from sessionStorage
+        window.onload = async function() {
+            deptName = sessionStorage.getItem('selected_dept');
+            collegeId = sessionStorage.getItem('college_id');
+            collegeName = sessionStorage.getItem('college_name');
+
+            if (!deptName || !collegeId) {
+                alert('Missing department or college information');
+                window.location.href = 'admin_dashboard.html';
+                return;
+            }
+
+            // Update page title and info
+            document.getElementById('deptName').textContent = `Department: ${deptName}`;
+            document.getElementById('collegeInfo').textContent = `College: ${collegeName}`;
+            document.getElementById('deptTitle').textContent = `${deptName} Timetables`;
+
+            try {
+                const response = await fetch(`/get-timetables?dept_name=${encodeURIComponent(deptName)}&college_id=${encodeURIComponent(collegeId)}`);
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Received data:', data); // Debug log
+                
+                if (!data.ok) {
+                    throw new Error(data.error || 'Failed to load timetables');
+                }
+
+                if (!data.timetables || Object.keys(data.timetables).length === 0) {
+                    document.getElementById('timetableContainer').innerHTML = `
+                        <div class="alert">No timetables found for this department.</div>
+                    `;
+                    return;
+                }
+
+                // Validate timetable data structure
+                for (const [section, timetable] of Object.entries(data.timetables)) {
+                    if (!Array.isArray(timetable)) {
+                        console.warn(`Invalid timetable format for section ${section}:`, timetable);
+                        data.timetables[section] = Array(5).fill().map(() => Array(7).fill(null));
+                    } else if (timetable.length !== 5) {
+                        console.warn(`Wrong number of days for section ${section}:`, timetable);
+                        // Pad or truncate to 5 days
+                        data.timetables[section] = timetable.slice(0, 5);
+                        while (data.timetables[section].length < 5) {
+                            data.timetables[section].push(Array(7).fill(null));
+                        }
+                    }
+                    
+                    // Ensure each day has exactly 7 periods
+                    data.timetables[section] = data.timetables[section].map(day => {
+                        if (!Array.isArray(day)) {
+                            return Array(7).fill(null);
+                        }
+                        return day.slice(0, 7).concat(Array(7 - day.length).fill(null));
+                    });
+                }
+
+                currentSectionTimetables = data.timetables;
+                displayTimetables(data.timetables);
+
+                // Load faculty timetables in background
+                loadFacultyTimetables();
+                
+            } catch (error) {
+                console.error('Error fetching timetables:', error);
+                const errorMessage = error.message.includes('Failed to fetch') 
+                    ? 'Cannot connect to the server. Please ensure the server is running.'
+                    : error.message;
+                    
+                document.getElementById('timetableContainer').innerHTML = `
+                    <div class="alert">
+                        <p><strong>Failed to load timetables</strong></p>
+                        <p>${errorMessage}</p>
+                        <p><small>If the issue persists, try refreshing the page or contact support.</small></p>
+                    </div>
+                `;
+            }
+        };
+
+        async function loadFacultyTimetables() {
+            try {
+                const response = await fetch(`/get-faculty-timetables?dept_name=${encodeURIComponent(deptName)}&college_id=${encodeURIComponent(collegeId)}`);
+                if (!response.ok) {
+                    console.error(`Failed to fetch faculty timetables: ${response.status}`);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Faculty timetables data:', data);
+
+                if (!data.ok) {
+                    console.error('Error from server:', data.error);
+                    return;
+                }
+
+                currentFacultyTimetables = data.faculty_timetables;
+                const facultyList = data.faculty_list;
+
+                if (facultyList.length === 0) {
+                    document.getElementById('allFacultyTimetablesContainer').innerHTML = 
+                        '<div class="alert">No faculty found</div>';
+                    return;
+                }
+
+                // Store faculty list for later use
+                window.facultyList = facultyList;
+
+            } catch (error) {
+                console.error('Error loading faculty timetables:', error);
+            }
+        }
+
+        function switchView(view) {
+            currentView = view;
+            
+            // Update button styles
+            document.getElementById('sectionViewBtn').classList.toggle('active', view === 'section');
+            document.getElementById('facultyViewBtn').classList.toggle('active', view === 'faculty');
+
+            // Update visibility
+            document.getElementById('sectionView').style.display = view === 'section' ? 'block' : 'none';
+            document.getElementById('facultyView').style.display = view === 'faculty' ? 'block' : 'none';
+
+            // Display appropriate timetable
+            if (view === 'section') {
+                // Clear faculty container
+                document.getElementById('allFacultyTimetablesContainer').innerHTML = '';
+                // Show section timetables
+                displayTimetables(currentSectionTimetables);
+            } else {
+                // Show all faculty timetables
+                displayAllFacultyTimetables();
+            }
+        }
+
+        function displayAllFacultyTimetables() {
+            const container = document.getElementById('allFacultyTimetablesContainer');
+            const mainContainer = document.getElementById('timetableContainer');
+            
+            // Clear main container since we're using the faculty container
+            mainContainer.innerHTML = '';
+            
+            if (!currentFacultyTimetables || Object.keys(currentFacultyTimetables).length === 0) {
+                container.innerHTML = '<div class="alert">No faculty timetables available.</div>';
+                return;
+            }
+
+            const facultyList = window.facultyList || Object.keys(currentFacultyTimetables).sort();
+            let html = '';
+
+            facultyList.forEach(facultyName => {
+                const timetableData = currentFacultyTimetables[facultyName];
+                if (timetableData) {
+                    html += generateFacultyTimetableHTML(facultyName, timetableData);
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function generateFacultyTimetableHTML(facultyName, timetableData) {
+            const displayDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            
+            if (!timetableData || !Array.isArray(timetableData)) {
+                return `<div class="faculty-timetable-card">
+                    <div class="alert">No timetable data available for ${facultyName}</div>
+                </div>`;
+            }
+
+            let html = `
+                <div class="faculty-timetable-card">
+                    <h3>${facultyName}'s Timetable</h3>
+                    <table class="timetable">
+                        <thead>
+                            <tr>
+                                <th>Day/Period</th>
+                                <th>P1</th>
+                                <th>P2</th>
+                                <th class="break-header">BREAK</th>
+                                <th>P3</th>
+                                <th>P4</th>
+                                <th class="break-header">BREAK</th>
+                                <th>P5</th>
+                                <th>P6</th>
+                                <th>P7</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            timetableData.forEach((dayData, dayIndex) => {
+                html += `<tr><th>${displayDays[dayIndex]}</th>`;
+                
+                if (Array.isArray(dayData)) {
+                    // Display P1 and P2
+                    for (let p = 0; p < 2; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                    
+                    // Add first break
+                    html += '<td class="break-cell">BREAK</td>';
+                    
+                    // Display P3 and P4
+                    for (let p = 2; p < 4; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                    
+                    // Add second break
+                    html += '<td class="break-cell">BREAK</td>';
+                    
+                    // Display P5, P6, and P7
+                    for (let p = 4; p < 7; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                } else {
+                    // If day data is not an array, fill with empty cells
+                    for (let i = 0; i < 9; i++) {
+                        if (i === 2 || i === 5) {
+                            html += '<td class="break-cell">BREAK</td>';
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                }
+                html += '</tr>';
+            });
+
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function displayTimetables(timetables) {
+            console.log('Displaying timetables:', timetables); // Debug log
+            
+            const sectionButtons = document.getElementById('sectionButtons');
+            const timetableContainer = document.getElementById('timetableContainer');
+            sectionButtons.innerHTML = ''; // Clear existing buttons
+
+            if (!timetables || Object.keys(timetables).length === 0) {
+                sectionButtons.innerHTML = '<div>No timetables available</div>';
+                timetableContainer.innerHTML = '<div class="alert">No timetables available</div>';
+                return;
+            }
+
+            // Sort sections to ensure consistent order (A, B, C, etc.)
+            const sortedSections = Object.keys(timetables).sort();
+
+            // Create buttons for each section
+            sortedSections.forEach((section, index) => {
+                console.log(`Section ${section} data:`, timetables[section]); // Debug log
+                const button = document.createElement('button');
+                button.textContent = `Section ${section}`;
+                button.className = 'section-btn' + (index === 0 ? ' active' : '');
+                button.onclick = () => {
+                    // Update active button
+                    document.querySelectorAll('.section-btn').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    // Display timetable for selected section
+                    displayTimetable(section, timetables[section]);
+                };
+                sectionButtons.appendChild(button);
+            });
+
+            // Display first section's timetable by default
+            if (Object.keys(timetables).length > 0) {
+                const firstSection = Object.keys(timetables)[0];
+                console.log('Displaying first section:', firstSection);
+                displayTimetable(firstSection, timetables[firstSection]);
+            }
+        }
+
+        function displayTimetable(section, timetableData) {
+            const container = document.getElementById('timetableContainer');
+            const displayDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            
+            if (!timetableData || !Array.isArray(timetableData)) {
+                container.innerHTML = `<div class="alert">No timetable data available for Section ${section}</div>`;
+                return;
+            }
+
+            let html = `
+                <h3>Semister ${section} Timetable</h3>
+                <table class="timetable">
+                    <thead>
+                        <tr>
+                            <th>Day/Period</th>
+                            <th>P1</th>
+                            <th>P2</th>
+                            <th class="break-header">BREAK</th>
+                            <th>P3</th>
+                            <th>P4</th>
+                            <th class="break-header">BREAK</th>
+                            <th>P5</th>
+                            <th>P6</th>
+                            <th>P7</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            // timetableData is a 2D array where:
+            // First dimension (i) represents days (0 = Monday, 1 = Tuesday, etc.)
+            // Second dimension (j) represents periods (0 = P1, 1 = P2, etc.)
+            timetableData.forEach((dayData, dayIndex) => {
+                html += `<tr><th>${displayDays[dayIndex]}</th>`;
+                
+                if (Array.isArray(dayData)) {
+                    // Display P1 and P2
+                    for (let p = 0; p < 2; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                    
+                    // Add first break
+                    html += '<td class="break-cell">BREAK</td>';
+                    
+                    // Display P3 and P4
+                    for (let p = 2; p < 4; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                    
+                    // Add second break
+                    html += '<td class="break-cell">BREAK</td>';
+                    
+                    // Display P5, P6, and P7
+                    for (let p = 4; p < 7; p++) {
+                        const slot = dayData[p];
+                        if (slot) {
+                            const subjectName = slot.split('\n')[0].trim();
+                            const isLab = labSubjects.has(subjectName) || slot.toLowerCase().includes('lab');
+                            html += `<td class="${isLab ? 'lab' : ''}">
+                                <div class="subject-info">${slot}</div>
+                            </td>`;
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                } else {
+                    // If day data is not an array, fill with empty cells
+                    for (let i = 0; i < 9; i++) {  // 9 cells including breaks
+                        if (i === 2 || i === 5) {
+                            html += '<td class="break-cell">🍽️ BREAK</td>';
+                        } else {
+                            html += '<td>-</td>';
+                        }
+                    }
+                }
+                html += '</tr>';
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function goBack() {
+            window.location.href = 'admin_dashboard.html';
+        }
+    </script>
+</body>
+</html>
