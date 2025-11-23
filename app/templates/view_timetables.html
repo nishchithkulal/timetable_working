@@ -1,0 +1,338 @@
+<!-- view_timetables.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Timetables</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; }
+        
+        .header { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 14px 20px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.3s; }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+        .header h1 { flex: 1; text-align: center; font-size: 20px; font-weight: 700; }
+        
+        .main-content { margin-top: 76px; padding: 30px 20px; }
+        
+        .controls-card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; margin-bottom: 30px; max-width: 1200px; margin-left: auto; margin-right: auto; animation: slideUp 0.6s ease; position: relative; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .controls-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        .controls-title { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .controls-title::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
+        
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 14px; }
+        select { width: 100%; padding: 12px 14px; border: 2px solid #e8eef5; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s; background: white; }
+        select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
+        
+        .button-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .btn { padding: 12px 20px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45); }
+        .btn-secondary { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); box-shadow: 0 8px 24px rgba(127, 140, 141, 0.35); }
+        .btn-secondary:hover { box-shadow: 0 12px 32px rgba(127, 140, 141, 0.45); }
+        .btn.active { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        
+        .timetable-container { max-width: 1200px; margin: 0 auto; }
+        
+        .dept-section { margin-bottom: 30px; }
+        .dept-card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; position: relative; animation: slideUp 0.6s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .dept-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        .dept-title { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .dept-title::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
+        
+        .timetable-wrapper { overflow-x: auto; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%); padding: 14px 12px; text-align: center; font-weight: 600; color: #1e3a5f; border: 1px solid #e0e8f0; font-size: 13px; }
+        td { padding: 12px; border: 1px solid #e0e8f0; text-align: center; color: #2c3e50; font-size: 12px; }
+        tr:nth-child(even) { background: #f9fafb; }
+        tr:hover { background: #f0f4f8; }
+        tbody td:first-child { font-weight: 600; background: #f8fafc; text-align: left; }
+        
+        .break-cell { background: #dbeafe; color: #0369a1; }
+        .empty-cell { background: white; color: #a0aec0; }
+        
+        .no-data { text-align: center; padding: 40px 20px; color: #a0aec0; font-size: 16px; }
+        
+        @media (max-width: 768px) { 
+            .header { padding: 12px; }
+            .main-content { margin-top: 70px; padding: 20px 12px; }
+            .dept-card { padding: 20px; }
+            th, td { padding: 8px 6px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="window.history.back()">
+            <span class="material-icons">arrow_back</span>
+            Back
+        </button>
+        <h1>Timetables</h1>
+        <div style="width: 80px;"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="controls-card">
+            <h3 class="controls-title"><span class="material-icons" style="color: #3498db;">tune</span>View Options</h3>
+            
+            <div class="button-group">
+                <button class="btn active" id="sectionBtn" onclick="viewSectionTimetable()">📚 Section Timetable</button>
+                <button class="btn btn-secondary" id="facultyBtn" onclick="viewFacultyTimetable()">👥 Faculty Timetables</button>
+            </div>
+            
+            <div class="control-group" id="sectionSelectGroup">
+                <label for="sectionSelect">Select Section</label>
+                <select id="sectionSelect">
+                    <option value="">Loading sections...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="timetable-container">
+            <!-- Section Timetables View -->
+            <div id="sectionView">
+                <div id="sectionTimetablesContainer"></div>
+                <div id="sectionNoDataMsg" class="no-data">Loading timetables...</div>
+            </div>
+
+            <!-- Faculty Timetables View -->
+            <div id="facultyView" style="display: none;">
+                <div id="facultyTimetablesContainer"></div>
+                <div id="facultyNoDataMsg" class="no-data">Loading faculty timetables...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        let allTimetables = {};
+        let allFacultyTimetables = {};
+        let currentViewMode = 'section'; // 'section' or 'faculty'
+
+        async function loadSections() {
+            try {
+                const deptName = sessionStorage.getItem('selected_dept');
+                if (!deptName) {
+                    console.error('No department selected');
+                    return;
+                }
+
+                const response = await fetch('/get-timetables', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        dept_name: deptName,
+                        college_id: sessionStorage.getItem('college_id')
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok && data.timetables) {
+                    allTimetables = data.timetables;
+                    populateSectionSelect();
+                    displaySectionTimetables();
+                } else {
+                    document.getElementById('sectionNoDataMsg').textContent = 'No timetables available';
+                }
+            } catch (error) {
+                console.error('Error loading sections:', error);
+                document.getElementById('sectionNoDataMsg').textContent = 'Error loading timetables';
+            }
+        }
+
+        function populateSectionSelect() {
+            const select = document.getElementById('sectionSelect');
+            select.innerHTML = '';
+            Object.keys(allTimetables).forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = `Section ${section}`;
+                select.appendChild(option);
+            });
+            if (Object.keys(allTimetables).length > 0) {
+                select.value = Object.keys(allTimetables)[0];
+            }
+        }
+
+        function displaySectionTimetables() {
+            const deptName = sessionStorage.getItem('selected_dept');
+            const container = document.getElementById('sectionTimetablesContainer');
+            container.innerHTML = '';
+
+            if (!allTimetables || Object.keys(allTimetables).length === 0) {
+                document.getElementById('sectionNoDataMsg').textContent = 'No timetables found';
+                return;
+            }
+
+            // Display only selected section
+            const selectedSection = document.getElementById('sectionSelect').value;
+            if (selectedSection && allTimetables[selectedSection]) {
+                renderTimetable(allTimetables[selectedSection], `${deptName} - Section ${selectedSection}`, container);
+                document.getElementById('sectionNoDataMsg').style.display = 'none';
+            } else {
+                document.getElementById('sectionNoDataMsg').textContent = 'Select a section to view';
+            }
+        }
+
+        async function loadFacultyTimetables() {
+            try {
+                const deptName = sessionStorage.getItem('selected_dept');
+                const collegeId = sessionStorage.getItem('college_id');
+                
+                console.log('Loading faculty timetables for:', deptName, collegeId);
+                
+                const response = await fetch(`/get-faculty-timetables-db?dept_name=${encodeURIComponent(deptName)}&college_id=${encodeURIComponent(collegeId)}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                console.log('Faculty timetables response:', data);
+                
+                if (response.ok && data.faculty_timetables) {
+                    allFacultyTimetables = data.faculty_timetables;
+                    if (Object.keys(allFacultyTimetables).length === 0) {
+                        document.getElementById('facultyNoDataMsg').textContent = data.message || 'No faculty timetables found';
+                    } else {
+                        displayFacultyTimetables();
+                    }
+                } else {
+                    document.getElementById('facultyNoDataMsg').textContent = data.error || 'No faculty timetables available';
+                }
+            } catch (error) {
+                console.error('Error loading faculty timetables:', error);
+                document.getElementById('facultyNoDataMsg').textContent = 'Error loading faculty timetables: ' + error.message;
+            }
+        }
+
+        function displayFacultyTimetables() {
+            const container = document.getElementById('facultyTimetablesContainer');
+            container.innerHTML = '';
+
+            if (!allFacultyTimetables || Object.keys(allFacultyTimetables).length === 0) {
+                document.getElementById('facultyNoDataMsg').textContent = 'No faculty timetables found';
+                return;
+            }
+
+            Object.keys(allFacultyTimetables).forEach(facultyName => {
+                const timetableData = allFacultyTimetables[facultyName];
+                renderTimetable(timetableData, facultyName, container);
+            });
+            document.getElementById('facultyNoDataMsg').style.display = 'none';
+        }
+
+        function renderTimetable(timetableData, title, container) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'dept-section';
+            
+            let html = `
+                <div class="dept-card">
+                    <h3 class="dept-title"><span class="material-icons" style="color: #3498db; font-size: 24px;">schedule</span>${title}</h3>
+                    <div class="timetable-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Day / Period</th>
+                                    <th>P1</th>
+                                    <th>P2</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P3</th>
+                                    <th>P4</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P5</th>
+                                    <th>P6</th>
+                                    <th>P7</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            // Handle array format with 7 periods (breaks inserted at display indices 2 and 5)
+            if (Array.isArray(timetableData)) {
+                days.forEach((day, dayIdx) => {
+                    html += '<tr>';
+                    html += `<td>${day}</td>`;
+                    
+                    if (timetableData[dayIdx] && Array.isArray(timetableData[dayIdx])) {
+                        const daySchedule = timetableData[dayIdx];
+                        let displaySlots = [
+                            daySchedule[0], // P1
+                            daySchedule[1], // P2
+                            'Break',         // Break after P2
+                            daySchedule[2], // P3
+                            daySchedule[3], // P4
+                            'Break',         // Break after P4
+                            daySchedule[4], // P5
+                            daySchedule[5], // P6
+                            daySchedule[6]  // P7
+                        ];
+                        
+                        displaySlots.forEach((slot, displayIdx) => {
+                            const isBreak = displayIdx === 2 || displayIdx === 5;
+                            let cellClass = isBreak ? 'break-cell' : (slot ? '' : 'empty-cell');
+                            // For faculty timetables, slots may have newlines (section info), so replace them
+                            let content = isBreak ? 'Break' : (slot ? String(slot).substring(0, 25).replace(/\n/g, ' ') : '-');
+                            html += `<td class="${cellClass}">${content}</td>`;
+                        });
+                    } else {
+                        for (let i = 0; i < 9; i++) {
+                            const isBreak = i === 2 || i === 5;
+                            html += `<td class="${isBreak ? 'break-cell' : 'empty-cell'}">${isBreak ? 'Break' : '-'}</td>`;
+                        }
+                    }
+                    html += '</tr>';
+                });
+            }
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            sectionDiv.innerHTML = html;
+            container.appendChild(sectionDiv);
+        }
+
+        function viewSectionTimetable() {
+            currentViewMode = 'section';
+            document.getElementById('sectionBtn').classList.add('active');
+            document.getElementById('facultyBtn').classList.remove('active');
+            document.getElementById('sectionSelectGroup').style.display = 'block';
+            document.getElementById('sectionView').style.display = 'block';
+            document.getElementById('facultyView').style.display = 'none';
+            displaySectionTimetables();
+        }
+
+        function viewFacultyTimetable() {
+            currentViewMode = 'faculty';
+            document.getElementById('facultyBtn').classList.add('active');
+            document.getElementById('sectionBtn').classList.remove('active');
+            document.getElementById('sectionSelectGroup').style.display = 'none';
+            document.getElementById('sectionView').style.display = 'none';
+            document.getElementById('facultyView').style.display = 'block';
+            if (Object.keys(allFacultyTimetables).length === 0) {
+                loadFacultyTimetables();
+            } else {
+                displayFacultyTimetables();
+            }
+        }
+
+        document.getElementById('sectionSelect').addEventListener('change', displaySectionTimetables);
+
+        window.addEventListener('load', loadSections);
+    </script>
+</body>
+</html>

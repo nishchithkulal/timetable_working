@@ -1,0 +1,108 @@
+<!-- authority_login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authority Login</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; overflow-x: hidden; }
+        .bg-shape { position: fixed; border-radius: 50%; opacity: 0.08; background: white; animation: float 20s infinite ease-in-out; pointer-events: none; }
+        .bg-shape:nth-child(1) { width: 400px; height: 400px; top: -100px; left: -100px; }
+        .bg-shape:nth-child(2) { width: 300px; height: 300px; bottom: -80px; right: -80px; animation-delay: -7s; }
+        @keyframes float { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(20px, -20px) scale(1.05); } 66% { transform: translate(-15px, 15px) scale(0.95); } }
+        .container { background: white; border-radius: 32px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25); width: 100%; max-width: 440px; padding: 50px 40px; position: relative; z-index: 10; animation: slideUp 0.6s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .header { text-align: center; margin-bottom: 35px; }
+        .header-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 15px 40px rgba(243, 156, 18, 0.4); }
+        .header-icon .material-icons { font-size: 40px; color: white; }
+        .header h2 { color: #1e3a5f; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .header p { color: #7f8c8d; font-size: 14px; }
+        form { display: flex; flex-direction: column; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; gap: 10px; }
+        label { color: #2c3e50; font-weight: 600; font-size: 14px; }
+        input { padding: 14px 16px; border: 2px solid #e8eef5; border-radius: 12px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s ease; background: #f8fafc; }
+        input:focus { outline: none; border-color: #f39c12; background: white; box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.1); }
+        .btn { padding: 16px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; font-family: 'Inter', sans-serif; box-shadow: 0 8px 30px rgba(243, 156, 18, 0.4); }
+        .btn:hover { transform: translateY(-4px); box-shadow: 0 15px 40px rgba(243, 156, 18, 0.5); }
+        .message { text-align: center; font-size: 14px; min-height: 20px; font-weight: 500; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #f39c12; text-decoration: none; font-weight: 600; font-size: 14px; transition: color 0.3s ease; }
+        .back-link:hover { color: #e67e22; }
+        @media (max-width: 480px) { body { padding: 16px; } .container { padding: 40px 25px; border-radius: 26px; } .header h2 { font-size: 24px; } }
+    </style>
+</head>
+<body>
+    <div class="bg-shape"></div>
+    <div class="bg-shape"></div>
+    <div class="container">
+        <div class="header">
+            <div class="header-icon">
+                <span class="material-icons">security</span>
+            </div>
+            <h2>Authority Login</h2>
+            <p>Access authority management</p>
+        </div>
+        <form id="authorityLoginForm">
+            <div class="form-group">
+                <label for="authority_id">Authority ID</label>
+                <input type="text" id="authority_id" name="authority_id" placeholder="Your Authority ID" required>
+            </div>
+            <div class="form-group">
+                <label for="authority_password">Password</label>
+                <input type="password" id="authority_password" name="authority_password" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+            <div id="message" class="message"></div>
+        </form>
+        <a href="index.html" class="back-link">← Back to Home</a>
+    </div>
+
+    <script>
+        document.getElementById('authorityLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                authority_id: document.getElementById('authority_id').value,
+                authority_password: document.getElementById('authority_password').value
+            };
+
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/authority/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.style.color = '#2ecc71';
+                    messageDiv.textContent = 'Login successful!';
+                    
+                    sessionStorage.setItem('authority_id', data.authority_id);
+                    sessionStorage.setItem('authority_name', data.authority_name);
+                    
+                    setTimeout(() => {
+                        window.location.href = 'authority_dashboard.html';
+                    }, 500);
+                } else {
+                    messageDiv.style.color = '#e74c3c';
+                    messageDiv.textContent = data.error || 'Login failed';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.style.color = '#e74c3c';
+                messageDiv.textContent = 'Error connecting to server';
+            }
+        });
+    </script>
+</body>
+</html>
