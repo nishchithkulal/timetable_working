@@ -238,10 +238,14 @@ def build_constraints_from_db(dept_name: str, college_id: str):
             if constraint.subject not in target_dict[constraint.section]:
                 target_dict[constraint.section][constraint.subject] = []
             
-            # Add the (day, period) tuple
-            target_dict[constraint.section][constraint.subject].append((constraint.day, constraint.period))
+            # Add the (day, period) tuple - ensure integers
+            day_val = int(constraint.day) if isinstance(constraint.day, str) else constraint.day
+            period_val = int(constraint.period) if isinstance(constraint.period, str) else constraint.period
+            target_dict[constraint.section][constraint.subject].append((day_val, period_val))
         
         logging.info(f"Built constraints for {dept_name}: {len(constraints)} total constraints")
+        logging.info(f"  Strict constraints: {strict_constraints}")
+        logging.info(f"  Forbidden constraints: {forbidden_constraints}")
         return strict_constraints, forbidden_constraints
         
     except Exception as e:

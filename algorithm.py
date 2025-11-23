@@ -350,9 +350,15 @@ def can_place_lab(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, 
     - Invalid positions: P2-P3 (crosses first break), P4-P5 (crosses second break)
     - For last=True labs (MC1, MC2, MP), must be at P6-P7
     - MC1 and MC2 are enforced to P6-P7 only
+    - Labs cannot be placed at P7 (only 1 slot available)
     """
     if subject not in subjects_per_section[section]:
         return False
+    
+    # Labs cannot be placed at P7 (need 2 consecutive periods)
+    if period == 7:
+        return False
+    
     info = subjects_per_section[section][subject]
 
     # MC1 and MC2 MUST be at P6-P7 (strictly enforced)
@@ -418,29 +424,24 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
 
             # For non-lab strict placements, check consecutive constraint BEFORE placing
             if not is_lab:
-                # Temporarily place to check constraint
-                temp_placed = False
-                for i in range(slots_needed):
-                    if timetable[day][period + i] is not None:
-                        temp_placed = False
-                        break
-                    timetable[day][period + i] = subject
-                    temp_placed = True
-
-                if temp_placed and not check_consecutive_constraint(timetable, subject, day, period, is_lab):
-                    print(f"    ✗ Could not place strict {subject} at {days[day]} P{period} - violates consecutive constraint")
-                    # Rollback
-                    for i in range(slots_needed):
-                        timetable[day][period + i] = None
+                # Check if cell is already occupied
+                if timetable[day][period] is not None:
+                    print(f"    ✗ Could not place strict {subject} at {days[day]} P{period} - cell occupied")
                     continue
 
-                if not temp_placed:
+                # Temporarily place to check constraint
+                timetable[day][period] = subject
+                
+                if not check_consecutive_constraint(timetable, subject, day, period, is_lab):
+                    print(f"    ✗ Could not place strict {subject} at {days[day]} P{period} - violates consecutive constraint")
+                    # Rollback
+                    timetable[day][period] = None
                     continue
 
                 # If valid, update counters and faculty schedule
-                for i in range(slots_needed):
-                    counters[subject] += 1
-                    faculty_schedule[(section, day, period + i)] = faculty
+                counters[subject] += 1
+                faculty_schedule[(section, day, period)] = faculty
+                print(f"    ✓ Placed strict {subject} at {days[day]} P{period}")
             else:
                 # Labs - check MC1/MC2 overlap if applicable
                 if subject in ["MC1", "MC2"]:
@@ -453,6 +454,7 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                     timetable[day][period + i] = subject
                     counters[subject] += 1
                     faculty_schedule[(section, day, period + i)] = faculty
+                print(f"    ✓ Placed strict lab {subject} at {days[day]} P{period}-P{period+1}")
 
     subjects_to_place = [s for s, info in subjects_per_section[section].items() if s != "REMEDIAL"]
 
@@ -466,7 +468,7 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
             if timetable[day][period] is not None:
                 continue
 
-            # Check if this cell is locked
+            # Check if this cell is locked to a strict placement
             if is_locked_cell(section, day, period):
                 continue
 
@@ -476,7 +478,7 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                 if counters[subject] >= info["hours"]:
                     continue
 
-                # Check forbidden constraint
+                # Check forbidden constraint for this subject
                 if is_locked_cell(section, day, period, subject):
                     continue
 
@@ -484,6 +486,10 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                 faculty = get_faculty_for_subject(section, subject)
 
                 if is_lab:
+                    # For labs, check if next period would exceed bounds
+                    if period + 1 > num_periods:  # Can't place 2-period lab if no next period
+                        continue
+                    
                     if info["hours"] - counters[subject] >= 2:
                         if can_place_lab(timetable, subject, section, day, period, 2):
                             # Check last subject overlap (includes MC1/MC2 overlap check)
@@ -497,12 +503,7 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                                     faculty_schedule[(section, day, period+i)] = faculty
                                 break
                 else:
-                    # For non-lab subjects, MUST check consecutive constraint AND forbidden constraint
-                    # First check if placement is forbidden
-                    if is_locked_cell(section, day, period, subject):
-                        continue
-                    
-                    # First, temporarily place to check if it violates consecutive constraint
+                    # For non-lab subjects, check consecutive constraint
                     old_val = timetable[day][period]
                     timetable[day][period] = subject
 
