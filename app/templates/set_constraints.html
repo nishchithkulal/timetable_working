@@ -1,144 +1,335 @@
 <!-- set_constraints.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Subject Constraints</title>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; }
-        
-        .app-bar { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 14px 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; gap: 16px; }
-        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.3s; }
-        .back-btn:hover { background: rgba(255,255,255,0.3); }
-        .app-bar h1 { flex: 1; font-size: 20px; font-weight: 700; }
-        
-        .container { max-width: 900px; margin: 76px auto 20px; padding: 30px 20px; }
-        
-        .card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; animation: slideUp 0.6s ease; position: relative; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
-        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        
-        h2 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-        h2::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 14px; }
-        
-        input[type="text"], input[type="number"], select { width: 100%; padding: 12px 14px; border: 2px solid #e8eef5; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s; background: #f8fafc; }
-        input:focus, select:focus { outline: none; border-color: #3498db; background: white; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
-        
-        .btn { padding: 14px 24px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35); width: 100%; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45); }
-        
-        .message { margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; padding: 12px; border-radius: 8px; display: none; }
-        .success { background: #dbeafe; color: #0369a1; }
-        .error { background: #fee2e2; color: #991b1b; }
-        
-        @media (max-width: 768px) { .container { margin-top: 70px; padding: 20px 12px; } .card { padding: 20px; } }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #1a5276 0%,
+          #2980b9 50%,
+          #3498db 100%
+        );
+        min-height: 100vh;
+      }
+
+      .app-bar {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        padding: 14px 20px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .back-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.3s;
+      }
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .app-bar h1 {
+        flex: 1;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 76px auto 20px;
+        padding: 30px 20px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        padding: 32px;
+        animation: slideUp 0.6s ease;
+        position: relative;
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
+        background-size: 200% 100%;
+        animation: gradientMove 3s ease infinite;
+        border-radius: 20px 20px 0 0;
+      }
+      @keyframes gradientMove {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      h2 {
+        color: #1e3a5f;
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      h2::before {
+        content: "";
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(180deg, #3498db, #2980b9);
+        border-radius: 2px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 10px;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid #e8eef5;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: "Inter", sans-serif;
+        transition: all 0.3s;
+        background: #f8fafc;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #3498db;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+      }
+
+      .btn {
+        padding: 14px 24px;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: "Inter", sans-serif;
+        box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35);
+        width: 100%;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45);
+      }
+
+      .message {
+        margin-top: 16px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 12px;
+        border-radius: 8px;
+        display: none;
+      }
+      .success {
+        background: #dbeafe;
+        color: #0369a1;
+      }
+      .error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          margin-top: 70px;
+          padding: 20px 12px;
+        }
+        .card {
+          padding: 20px;
+        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-bar">
-        <button class="back-btn" onclick="window.history.back()">
-            <span class="material-icons">arrow_back</span>
-        </button>
-        <h1>Subject Constraints</h1>
+      <button class="back-btn" onclick="window.history.back()">
+        <span class="material-icons">arrow_back</span>
+      </button>
+      <h1>Subject Constraints</h1>
     </div>
 
     <div class="container">
-        <div class="card">
-            <h2><span class="material-icons" style="color: #3498db;">settings</span>Set Subject Constraints</h2>
-            
-            <form id="constraintForm">
-                <div class="form-group">
-                    <label for="subject">Subject</label>
-                    <select id="subject" required>
-                        <option value="" disabled selected>Select subject...</option>
-                    </select>
-                </div>
+      <div class="card">
+        <h2>
+          <span class="material-icons" style="color: #3498db">settings</span>Set
+          Subject Constraints
+        </h2>
 
-                <div class="form-group">
-                    <label for="min_days">Minimum Days Per Week</label>
-                    <input type="number" id="min_days" min="1" max="5" value="1" required>
-                </div>
+        <form id="constraintForm">
+          <div class="form-group">
+            <label for="subject">Subject</label>
+            <select id="subject" required>
+              <option value="" disabled selected>Select subject...</option>
+            </select>
+          </div>
 
-                <div class="form-group">
-                    <label for="max_days">Maximum Days Per Week</label>
-                    <input type="number" id="max_days" min="1" max="5" value="5" required>
-                </div>
+          <div class="form-group">
+            <label for="min_days">Minimum Days Per Week</label>
+            <input
+              type="number"
+              id="min_days"
+              min="1"
+              max="5"
+              value="1"
+              required
+            />
+          </div>
 
-                <button type="submit" class="btn">Save Constraints</button>
-                <div id="message" class="message"></div>
-            </form>
-        </div>
+          <div class="form-group">
+            <label for="max_days">Maximum Days Per Week</label>
+            <input
+              type="number"
+              id="max_days"
+              min="1"
+              max="5"
+              value="5"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn">Save Constraints</button>
+          <div id="message" class="message"></div>
+        </form>
+      </div>
     </div>
 
     <script>
-        async function loadSubjects() {
-            try {
-                const collegeId = sessionStorage.getItem('college_id');
-                const response = await fetch(`/get-subjects?college_id=${collegeId}`, { credentials: 'include' });
-                const data = await response.json();
-                
-                const select = document.getElementById('subject');
-                select.innerHTML = '<option value="" disabled selected>Select subject...</option>';
-                if (data.subjects) {
-                    data.subjects.forEach(s => {
-                        const option = document.createElement('option');
-                        option.value = s.subject_code;
-                        option.textContent = `${s.subject_code} - ${s.subject_name}`;
-                        select.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+      async function loadSubjects() {
+        try {
+          const collegeId = sessionStorage.getItem("college_id");
+          const response = await fetch(
+            `/get-subjects?college_id=${collegeId}`,
+            { credentials: "include" }
+          );
+          const data = await response.json();
+
+          const select = document.getElementById("subject");
+          select.innerHTML =
+            '<option value="" disabled selected>Select subject...</option>';
+          if (data.subjects) {
+            data.subjects.forEach((s) => {
+              const option = document.createElement("option");
+              option.value = s.subject_code;
+              option.textContent = `${s.subject_code} - ${s.subject_name}`;
+              select.appendChild(option);
+            });
+          }
+        } catch (error) {
+          console.error("Error:", error);
         }
+      }
 
-        document.getElementById('constraintForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = {
-                subject_code: document.getElementById('subject').value,
-                min_days_per_week: parseInt(document.getElementById('min_days').value),
-                max_days_per_week: parseInt(document.getElementById('max_days').value),
-                college_id: sessionStorage.getItem('college_id')
-            };
+      document
+        .getElementById("constraintForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
 
-            try {
-                const response = await fetch('/set-constraints', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(formData)
-                });
+          const formData = {
+            subject_code: document.getElementById("subject").value,
+            min_days_per_week: parseInt(
+              document.getElementById("min_days").value
+            ),
+            max_days_per_week: parseInt(
+              document.getElementById("max_days").value
+            ),
+            college_id: sessionStorage.getItem("college_id"),
+          };
 
-                const data = await response.json();
-                if (response.ok) {
-                    showMessage('Constraints saved successfully!', 'success');
-                } else {
-                    showMessage(data.error || 'Failed to save constraints', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showMessage('Error connecting to server', 'error');
+          try {
+            const response = await fetch("/save-constraints", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+              showMessage("Constraints saved successfully!", "success");
+            } else {
+              showMessage(data.error || "Failed to save constraints", "error");
             }
+          } catch (error) {
+            console.error("Error:", error);
+            showMessage("Error connecting to server", "error");
+          }
         });
 
-        function showMessage(msg, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = msg;
-            messageDiv.className = 'message ' + type;
-            messageDiv.style.display = 'block';
-            setTimeout(() => { messageDiv.style.display = 'none'; }, 3000);
-        }
+      function showMessage(msg, type) {
+        const messageDiv = document.getElementById("message");
+        messageDiv.textContent = msg;
+        messageDiv.className = "message " + type;
+        messageDiv.style.display = "block";
+        setTimeout(() => {
+          messageDiv.style.display = "none";
+        }, 3000);
+      }
 
-        window.addEventListener('load', loadSubjects);
+      window.addEventListener("load", loadSubjects);
     </script>
-</body>
+  </body>
 </html>

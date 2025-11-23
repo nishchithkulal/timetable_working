@@ -1111,6 +1111,14 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         best_all_timetables = all_timetables
         best_all_counters = all_counters
 
+    # Fill any remaining None values with REMEDIAL
+    if best_all_timetables:
+        for section in best_all_timetables:
+            for day in range(1, num_days + 1):
+                for period in range(1, num_periods + 1):
+                    if best_all_timetables[section][day][period] is None:
+                        best_all_timetables[section][day][period] = "REMEDIAL"
+    
     return best_all_timetables  # Return best attempt if we couldn't get a perfect solution
 
 if __name__ == "__main__":

@@ -303,7 +303,15 @@ def generate_timetable():
             sections, subjects_per_section, faculties = build_timetable_data_from_db(dept_name, college_id)
             
             if sections is None or subjects_per_section is None or faculties is None:
-                return jsonify({'ok': False, 'error': 'Failed to fetch timetable configuration from database'}), 400
+                # Provide more specific error information
+                dept = Department.query.filter_by(name=dept_name, college_id=college_id).first()
+                if not dept:
+                    error_msg = f'Department "{dept_name}" not found in college "{college_id}"'
+                elif not dept.sections:
+                    error_msg = f'Department "{dept_name}" has no sections defined'
+                else:
+                    error_msg = f'No subjects found for department "{dept_name}". Please add subjects first.'
+                return jsonify({'ok': False, 'error': error_msg}), 400
             
             logging.info(f"Successfully fetched data. Sections: {sections}, Subjects: {len(subjects_per_section)}")
             
@@ -1281,7 +1289,7 @@ def login_faculty():
 @app.route('/admin/register', methods=['POST'])
 def register_admin():
     try:
-        data = request.form
+        data = request.get_json()
         admin_name = data.get('admin_name')
         college_name = data.get('college_name')
         college_id = data.get('college_id')
