@@ -119,8 +119,7 @@
         let currentViewMode = 'section'; // 'section' or 'faculty'
         let breakConfig = {
             first: 2,
-            lunch: 4,
-            second: 6
+            lunch: 4
         };
 
         async function loadSections() {
@@ -149,8 +148,7 @@
                     if (data.break_config) {
                         breakConfig = {
                             first: data.break_config.first_break_period,
-                            lunch: data.break_config.lunch_break_period,
-                            second: data.break_config.second_break_period
+                            lunch: data.break_config.lunch_break_period
                         };
                         console.log('Loaded break config:', breakConfig);
                     }
@@ -257,7 +255,7 @@
             for (let p = 1; p <= 7; p++) {
                 headerHtml += `<th>P${p}</th>`;
                 // Add break cell after the break periods
-                if (p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) {
+                if (p === breakConfig.first || p === breakConfig.lunch) {
                     headerHtml += '<th style="background: #dbeafe;">Break</th>';
                 }
             }
@@ -290,7 +288,7 @@
                             html += `<td class="${cellClass}">${content}</td>`;
                             
                             // Add break cell after the break periods (but not after P7)
-                            if ((p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) && p !== 7) {
+                            if ((p === breakConfig.first || p === breakConfig.lunch) && p !== 7) {
                                 html += '<td class="break-cell">Break</td>';
                             }
                         }
@@ -298,7 +296,7 @@
                         for (let p = 1; p <= 7; p++) {
                             html += `<td class="empty-cell">-</td>`;
                             // Add break cells (but not after P7)
-                            if ((p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) && p !== 7) {
+                            if ((p === breakConfig.first || p === breakConfig.lunch) && p !== 7) {
                                 html += '<td class="break-cell">Break</td>';
                             }
                         }

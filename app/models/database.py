@@ -209,14 +209,13 @@ class FacultyTimetable(db.Model):
         }
 
 class BreakConfiguration(db.Model):
-    """Stores break timings (2 normal breaks + 1 lunch break) for each department"""
+    """Stores break timings (1 normal break + 1 lunch break) for each department"""
     __tablename__ = 'break_configurations'
     id = db.Column(db.Integer, primary_key=True)
     college_id = db.Column(db.String(50), nullable=False)
     dept_name = db.Column(db.String(100), nullable=False)
-    first_break_period = db.Column(db.String(10), nullable=False, default='2')  # Period number for first break (e.g., '2')
+    first_break_period = db.Column(db.String(10), nullable=False, default='2')  # Period number for break (e.g., '2')
     lunch_break_period = db.Column(db.String(10), nullable=False, default='4')  # Period number for lunch break (e.g., '4')
-    second_break_period = db.Column(db.String(10), nullable=False, default='6')  # Period number for second break (e.g., '6')
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
 
@@ -239,7 +238,6 @@ class BreakConfiguration(db.Model):
             'dept_name': self.dept_name,
             'first_break_period': self.first_break_period,
             'lunch_break_period': self.lunch_break_period,
-            'second_break_period': self.second_break_period,
             'created_at': self.created_at.isoformat() if self.created_at is not None else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at is not None else None
         }

@@ -172,11 +172,20 @@
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="margin-bottom: 0;">
+                                <label for="formSection">Section</label>
+                                <select id="formSection">
+                                    <option value="">Select section</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label for="formSubject">Subject</label>
                                 <select id="formSubject" disabled>
                                     <option value="">Select subject</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label for="formDay">Day</label>
                                 <select id="formDay">
@@ -188,9 +197,6 @@
                                     <option value="5">Friday</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label for="formPeriod">Period</label>
                                 <select id="formPeriod">
@@ -204,7 +210,10 @@
                                     <option value="7">Period 7</option>
                                 </select>
                             </div>
-                            <button id="submitConstraintBtn" class="btn" style="grid-column: 2/4;">Save Constraint</button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px;">
+                            <button id="submitConstraintBtn" class="btn">Save Constraint</button>
                         </div>
                         <div id="constraintFormStatus" style="color: #e74c3c; font-size: 12px; font-weight: 500;"></div>
 
@@ -233,11 +242,11 @@
                 <!-- Break Configuration Section (appears after dept selection) -->
                 <div id="breakConfigSection" style="display: none; background: #f9fafb; padding: 20px; border-radius: 12px; margin-top: 20px; margin-bottom: 20px; border-left: 4px solid #9b59b6;">
                     <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 16px;">⏰ Break Configuration</h3>
-                    <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 16px;">Set when the 2 breaks and lunch break should appear for this department</p>
+                    <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 16px;">Set when the break and lunch break should appear for this department</p>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label for="firstBreakPeriod">First Break</label>
+                            <label for="firstBreakPeriod">Break</label>
                             <select id="firstBreakPeriod">
                                 <option value="">Select period</option>
                                 <option value="1">Period 1</option>
@@ -252,19 +261,6 @@
                         <div class="form-group" style="margin-bottom: 0;">
                             <label for="lunchBreakPeriod">Lunch Break</label>
                             <select id="lunchBreakPeriod">
-                                <option value="">Select period</option>
-                                <option value="1">Period 1</option>
-                                <option value="2">Period 2</option>
-                                <option value="3">Period 3</option>
-                                <option value="4">Period 4</option>
-                                <option value="5">Period 5</option>
-                                <option value="6">Period 6</option>
-                                <option value="7">Period 7</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="secondBreakPeriod">Second Break</label>
-                            <select id="secondBreakPeriod">
                                 <option value="">Select period</option>
                                 <option value="1">Period 1</option>
                                 <option value="2">Period 2</option>
@@ -526,6 +522,7 @@
             const constraintSection = document.getElementById('constraintSection');
             const breakConfigSection = document.getElementById('breakConfigSection');
             const formSubject = document.getElementById('formSubject');
+            const formSection = document.getElementById('formSection');
             const collegeId = sessionStorage.getItem('college_id');
             
             if (!dept) {
@@ -566,6 +563,23 @@
                 console.error('Error loading subjects:', error);
             }
             
+            // Load and populate sections for constraints
+            try {
+                const deptResponse = await fetch(`/get-department?dept_name=${encodeURIComponent(dept)}&college_id=${collegeId}`, 
+                    { credentials: 'include' });
+                const deptData = await deptResponse.json();
+                
+                if (deptData.ok && deptData.sections) {
+                    formSection.innerHTML = '<option value="">Select section</option>';
+                    deptData.sections.forEach(section => {
+                        formSection.innerHTML += `<option value="${section}">Section ${section}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading sections:', error);
+                formSection.innerHTML = '<option value="">Could not load sections</option>';
+            }
+            
             // Load existing constraints for this department
             await loadConstraintsForDept(dept, collegeId);
             
@@ -585,14 +599,12 @@
                 if (data.ok && data.break_config) {
                     document.getElementById('firstBreakPeriod').value = data.break_config.first_break_period || '2';
                     document.getElementById('lunchBreakPeriod').value = data.break_config.lunch_break_period || '4';
-                    document.getElementById('secondBreakPeriod').value = data.break_config.second_break_period || '6';
                     document.getElementById('breakConfigStatus').textContent = '✓ Loaded existing configuration';
                     document.getElementById('breakConfigStatus').style.color = '#2ecc71';
                 } else {
                     // Use defaults
                     document.getElementById('firstBreakPeriod').value = '2';
                     document.getElementById('lunchBreakPeriod').value = '4';
-                    document.getElementById('secondBreakPeriod').value = '6';
                     document.getElementById('breakConfigStatus').textContent = 'Using default configuration';
                     document.getElementById('breakConfigStatus').style.color = '#3498db';
                 }
@@ -609,17 +621,16 @@
             const collegeId = sessionStorage.getItem('college_id');
             const firstBreak = document.getElementById('firstBreakPeriod').value;
             const lunchBreak = document.getElementById('lunchBreakPeriod').value;
-            const secondBreak = document.getElementById('secondBreakPeriod').value;
             const statusDiv = document.getElementById('breakConfigStatus');
             
-            if (!firstBreak || !lunchBreak || !secondBreak) {
+            if (!firstBreak || !lunchBreak) {
                 statusDiv.style.color = '#e74c3c';
                 statusDiv.textContent = '❌ Please select all break periods';
                 return;
             }
             
             // Check for duplicate periods
-            const periods = [parseInt(firstBreak), parseInt(lunchBreak), parseInt(secondBreak)];
+            const periods = [parseInt(firstBreak), parseInt(lunchBreak)];
             if (new Set(periods).size !== periods.length) {
                 statusDiv.style.color = '#e74c3c';
                 statusDiv.textContent = '❌ Break periods must be different';
@@ -635,8 +646,7 @@
                         college_id: collegeId,
                         dept_name: dept,
                         first_break_period: firstBreak,
-                        lunch_break_period: lunchBreak,
-                        second_break_period: secondBreak
+                        lunch_break_period: lunchBreak
                     })
                 });
                 
@@ -657,6 +667,49 @@
         });
 
         // Load break configuration button removed - auto-loads on department change
+        
+        // Handle section change in constraint form - filter subjects by section
+        document.getElementById('formSection').addEventListener('change', async function() {
+            const section = this.value;
+            const dept = document.getElementById('department').value;
+            const collegeId = sessionStorage.getItem('college_id');
+            const formSubject = document.getElementById('formSubject');
+            
+            if (!section || !dept || !collegeId) {
+                formSubject.innerHTML = '<option value="">Select subject</option>';
+                formSubject.disabled = true;
+                return;
+            }
+            
+            try {
+                // Fetch subjects for this department and section
+                const response = await fetch(`/get-subjects?dept_name=${encodeURIComponent(dept)}&college_id=${collegeId}&section=${encodeURIComponent(section)}`, 
+                    { credentials: 'include' });
+                const data = await response.json();
+                
+                if (data.ok && data.subjects && data.subjects.length > 0) {
+                    formSubject.innerHTML = '<option value="">Select subject</option>';
+                    formSubject.disabled = false;
+                    
+                    data.subjects.forEach(subject => {
+                        const subjectName = typeof subject === 'string' ? subject : (subject.name || subject.subject_name);
+                        if (subjectName) {
+                            formSubject.innerHTML += `<option value="${subjectName}">${subjectName}</option>`;
+                        }
+                    });
+                    
+                    console.log('Section subjects loaded:', data.subjects.length);
+                } else {
+                    formSubject.innerHTML = '<option value="">No subjects for this section</option>';
+                    formSubject.disabled = true;
+                    console.log('No subjects found for section:', section);
+                }
+            } catch (error) {
+                console.error('Error loading subjects for section:', error);
+                formSubject.innerHTML = '<option value="">Error loading subjects</option>';
+                formSubject.disabled = true;
+            }
+        });
         
         document.addEventListener('DOMContentLoaded', loadDepartments);
         async function loadConstraintsForDept(dept, collegeId) {
@@ -685,6 +738,7 @@
             document.getElementById('constraintFormContainer').style.display = 'block';
             document.getElementById('submitConstraintBtn').dataset.constraintType = 'strict';
             document.getElementById('submitConstraintBtn').dataset.constraintId = '';
+            document.getElementById('formSection').value = '';
             document.getElementById('formSubject').value = '';
             document.getElementById('formDay').value = '';
             document.getElementById('formPeriod').value = '';
@@ -700,6 +754,7 @@
             document.getElementById('constraintFormContainer').style.display = 'block';
             document.getElementById('submitConstraintBtn').dataset.constraintType = 'forbidden';
             document.getElementById('submitConstraintBtn').dataset.constraintId = '';
+            document.getElementById('formSection').value = '';
             document.getElementById('formSubject').value = '';
             document.getElementById('formDay').value = '';
             document.getElementById('formPeriod').value = '';
@@ -742,7 +797,7 @@
                         <td style="padding: 10px; color: #1e3a5f;">${dayName}</td>
                         <td style="padding: 10px; color: #1e3a5f;">${periodName}</td>
                         <td style="padding: 10px; text-align: center;">
-                            <button onclick="editConstraint(${constraint.id}, '${constraint.subject}', ${constraint.day}, ${constraint.period}, '${constraint.constraint_type}')" style="background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-right: 4px;">✏️ Edit</button>
+                            <button onclick="editConstraint(${constraint.id}, '${constraint.section}', '${constraint.subject}', ${constraint.day}, ${constraint.period}, '${constraint.constraint_type}')" style="background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-right: 4px;">✏️ Edit</button>
                             <button onclick="deleteConstraint(${constraint.id})" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️ Delete</button>
                         </td>
                     `;
@@ -758,6 +813,7 @@
         // Close constraint form
         function closeConstraintForm() {
             document.getElementById('constraintFormContainer').style.display = 'none';
+            document.getElementById('formSection').value = '';
             document.getElementById('formSubject').value = '';
             document.getElementById('formDay').value = '';
             document.getElementById('formPeriod').value = '';
@@ -768,6 +824,7 @@
         // Submit constraint (add or edit)
         document.getElementById('submitConstraintBtn').addEventListener('click', async function() {
             const dept = document.getElementById('department').value;
+            const section = document.getElementById('formSection').value;
             const subject = document.getElementById('formSubject').value;
             const day = document.getElementById('formDay').value;
             const period = document.getElementById('formPeriod').value;
@@ -776,7 +833,7 @@
             const collegeId = sessionStorage.getItem('college_id');
             const statusDiv = document.getElementById('constraintFormStatus');
             
-            if (!subject || !day || !period) {
+            if (!section || !subject || !day || !period) {
                 statusDiv.style.color = '#e74c3c';
                 statusDiv.textContent = '❌ Please fill all fields';
                 return;
@@ -791,6 +848,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({
+                            section: section,
                             subject: subject,
                             day: parseInt(day),
                             period: parseInt(period),
@@ -806,6 +864,7 @@
                         body: JSON.stringify({
                             college_id: collegeId,
                             dept_name: dept,
+                            section: section,
                             subject: subject,
                             day: parseInt(day),
                             period: parseInt(period),
@@ -843,7 +902,8 @@
         });
 
         // Edit constraint - populate form and show modal
-        function editConstraint(constraintId, subject, day, period, constraintType) {
+        function editConstraint(constraintId, section, subject, day, period, constraintType) {
+            document.getElementById('formSection').value = section;
             document.getElementById('formSubject').value = subject;
             document.getElementById('formDay').value = day;
             document.getElementById('formPeriod').value = period;

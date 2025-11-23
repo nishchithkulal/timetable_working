@@ -257,7 +257,7 @@ def get_break_configuration(dept_name: str, college_id: str):
     Fetch break configuration for a department.
     
     Returns:
-        dict: {first_break_period, lunch_break_period, second_break_period}
+        dict: {first_break_period, lunch_break_period}
         Format: {period_name: period_number, ...}
     """
     try:
@@ -268,15 +268,13 @@ def get_break_configuration(dept_name: str, college_id: str):
         if break_config:
             return {
                 'first_break_period': int(break_config.first_break_period),
-                'lunch_break_period': int(break_config.lunch_break_period),
-                'second_break_period': int(break_config.second_break_period)
+                'lunch_break_period': int(break_config.lunch_break_period)
             }
         else:
             # Return default break configuration
             return {
                 'first_break_period': 2,
-                'lunch_break_period': 4,
-                'second_break_period': 6
+                'lunch_break_period': 4
             }
         
     except Exception as e:
@@ -1046,33 +1044,25 @@ def get_subjects():
             # Filter by department and section
             subjects = Subject.query.filter_by(
                 dept_name=dept_name,
-                section=section
+                section=section,
+                college_id=college_id
             ).all()
             logging.info(f"Found {len(subjects)} subjects for {dept_name}/{section}")
-            # Return full metadata for each subject (no deduplication - allows multiple faculties)
-            subject_list = [
-                {
-                    'name': subject.subject_name,
-                    'code': subject.subject_code,
-                    'hours': subject.hours,
-                    'lab': bool(subject.lab),
-                    'last': bool(subject.last),
-                    'faculty': subject.faculty_name
-                }
-                for subject in subjects
-            ]
-            # Deduplicate by subject name, keep first occurrence (metadata is same)
+            # Deduplicate by subject name
             seen = set()
             unique_subjects = []
-            for subj in subject_list:
-                if subj['name'] not in seen:
-                    seen.add(subj['name'])
-                    unique_subjects.append(subj)
+            for subject in subjects:
+                if subject.subject_name not in seen:
+                    seen.add(subject.subject_name)
+                    unique_subjects.append({'name': subject.subject_name, 'subject_name': subject.subject_name})
             unique_subjects = sorted(unique_subjects, key=lambda x: x['name'])
-            logging.info(f"Subject metadata: {unique_subjects}")
+            logging.info(f"Unique subjects for section {section}: {unique_subjects}")
         elif dept_name:
             # Filter by department only (for constraint form - needs all subjects in dept)
-            subjects = Subject.query.filter_by(dept_name=dept_name).all()
+            subjects = Subject.query.filter_by(dept_name=dept_name)
+            if college_id:
+                subjects = subjects.filter_by(college_id=college_id)
+            subjects = subjects.all()
             logging.info(f"Found {len(subjects)} subjects for {dept_name}")
             # Deduplicate and sort by subject name
             seen = set()
@@ -1080,7 +1070,7 @@ def get_subjects():
             for subject in subjects:
                 if subject.subject_name not in seen:
                     seen.add(subject.subject_name)
-                    unique_subjects.append({'name': subject.subject_name})
+                    unique_subjects.append({'name': subject.subject_name, 'subject_name': subject.subject_name})
             unique_subjects = sorted(unique_subjects, key=lambda x: x['name'])
             logging.info(f"Unique subjects for constraint form: {unique_subjects}")
         elif college_id:
@@ -1414,6 +1404,30 @@ def get_sections():
         return jsonify({'sections': sections}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/get-department', methods=['GET'])
+def get_department():
+    """Get department details including sections"""
+    try:
+        dept_name = request.args.get('dept_name')
+        college_id = request.args.get('college_id')
+        
+        if not dept_name:
+            return jsonify({'ok': False, 'error': 'Department name is required'}), 400
+        
+        if college_id:
+            department = Department.query.filter_by(name=dept_name, college_id=college_id).first()
+        else:
+            department = Department.query.filter_by(name=dept_name).first()
+        
+        if not department:
+            return jsonify({'ok': False, 'error': 'Department not found'}), 404
+        
+        sections = department.sections if department.sections else []
+        return jsonify({'ok': True, 'sections': sections, 'name': department.name}), 200
+    except Exception as e:
+        logging.exception("Failed to get department")
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/department/<int:dept_id>', methods=['PUT'])
 def update_department(dept_id):
@@ -1916,13 +1930,14 @@ def update_constraint(constraint_id):
             return jsonify({'ok': False, 'error': 'Constraint not found'}), 404
         
         data = request.get_json()
+        section = data.get('section')
         subject = data.get('subject')
         day = data.get('day')
         period = data.get('period')
         constraint_type = data.get('constraint_type')
         
         # Validate inputs
-        if not all([subject, day, period, constraint_type]):
+        if not all([section, subject, day, period, constraint_type]):
             return jsonify({'ok': False, 'error': 'All fields are required'}), 400
         
         if constraint_type not in ['strict', 'forbidden']:
@@ -1932,6 +1947,7 @@ def update_constraint(constraint_id):
             return jsonify({'ok': False, 'error': 'Invalid day (1-5) or period (1-7)'}), 400
         
         # Update constraint
+        constraint.section = section
         constraint.subject = subject
         constraint.day = str(day)  # Convert to string to match database column type
         constraint.period = str(period)  # Convert to string to match database column type
@@ -2012,8 +2028,7 @@ def get_break_config():
                     'college_id': college_id,
                     'dept_name': dept_name,
                     'first_break_period': '2',
-                    'lunch_break_period': '4',
-                    'second_break_period': '6'
+                    'lunch_break_period': '4'
                 }
             }), 200
     except Exception as e:
@@ -2029,13 +2044,12 @@ def save_break_config():
         dept_name = data.get('dept_name')
         first_break = data.get('first_break_period', '2')
         lunch_break = data.get('lunch_break_period', '4')
-        second_break = data.get('second_break_period', '6')
         
         if not college_id or not dept_name:
             return jsonify({'ok': False, 'error': 'Missing parameters'}), 400
         
         # Validate period values (should be 1-7)
-        for period_val in [first_break, lunch_break, second_break]:
+        for period_val in [first_break, lunch_break]:
             try:
                 p = int(period_val)
                 if p < 1 or p > 7:
@@ -2044,7 +2058,7 @@ def save_break_config():
                 return jsonify({'ok': False, 'error': 'Period must be a number'}), 400
         
         # Check for duplicate periods
-        periods = [int(first_break), int(lunch_break), int(second_break)]
+        periods = [int(first_break), int(lunch_break)]
         if len(periods) != len(set(periods)):
             return jsonify({'ok': False, 'error': 'Break periods must be different'}), 400
         
@@ -2058,15 +2072,13 @@ def save_break_config():
             # Update existing
             break_config.first_break_period = first_break
             break_config.lunch_break_period = lunch_break
-            break_config.second_break_period = second_break
         else:
             # Create new
             break_config = BreakConfiguration(
                 college_id=college_id,
                 dept_name=dept_name,
                 first_break_period=first_break,
-                lunch_break_period=lunch_break,
-                second_break_period=second_break
+                lunch_break_period=lunch_break
             )
             db.session.add(break_config)
         

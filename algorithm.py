@@ -13,14 +13,13 @@ forbidden_subject_placement = {}  # Will be set dynamically
 # Break configuration - default values
 break_periods = {
     'first': 2,      # First break after P2
-    'lunch': 4,      # Lunch break after P4
-    'second': 6      # Second break after P6
+    'lunch': 4       # Lunch break after P4
 }
 
 days = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 num_days = 5
 num_periods = 7  # Teaching periods
-num_display_slots = 9  # Including 2 breaks
+# num_display_slots will be set dynamically based on number of breaks
 max_subject_per_day = 3
 
 # Map teaching period to display slot
@@ -183,14 +182,19 @@ def print_timetable(section: str, timetable: Dict[int, Dict[int, Optional[str]]]
     print(f"SECTION {section} TIMETABLE".center(130))
     print(f"{'='*130}")
     print(f"{'Day':<12}", end="")
+    
+    # Calculate which display slots are breaks
+    first_break_slot = break_periods['first'] + 1  # +1 for the break itself
+    lunch_break_slot = break_periods['lunch'] + 2  # +2 for both breaks before lunch
+    
     for slot in range(1, num_display_slots + 1):
-        if slot == 3 or slot == 6:
+        if slot == first_break_slot or slot == lunch_break_slot:
             print(f"{'BREAK':<14}", end="")
         else:
             # Map display slot back to teaching period for label
-            if slot < 3:
+            if slot < first_break_slot:
                 p = slot
-            elif slot < 6:
+            elif slot < lunch_break_slot:
                 p = slot - 1
             else:
                 p = slot - 2
@@ -203,13 +207,13 @@ def print_timetable(section: str, timetable: Dict[int, Dict[int, Optional[str]]]
         print(f"{day_name:<12}", end="")
 
         for slot in range(1, num_display_slots + 1):
-            if slot == 3 or slot == 6:
+            if slot == first_break_slot or slot == lunch_break_slot:
                 print(f"{'BREAK':<14}", end="")
             else:
                 # Map display slot to teaching period
-                if slot < 3:
+                if slot < first_break_slot:
                     p = slot
-                elif slot < 6:
+                elif slot < lunch_break_slot:
                     p = slot - 1
                 else:
                     p = slot - 2
@@ -842,14 +846,19 @@ def print_faculty_timetable(faculty_name: str, faculty_tt: Dict[int, Dict[int, s
     print(f"FACULTY: {faculty_name}".center(130))
     print(f"{'='*130}")
     print(f"{'Day':<12}", end="")
+    
+    # Calculate which display slots are breaks
+    first_break_slot = break_periods['first'] + 1  # +1 for the break itself
+    lunch_break_slot = break_periods['lunch'] + 2  # +2 for both breaks before lunch
+    
     for slot in range(1, num_display_slots + 1):
-        if slot == 3 or slot == 6:
+        if slot == first_break_slot or slot == lunch_break_slot:
             print(f"{'BREAK':<14}", end="")
         else:
             # Map display slot back to teaching period for label
-            if slot < 3:
+            if slot < first_break_slot:
                 p = slot
-            elif slot < 6:
+            elif slot < lunch_break_slot:
                 p = slot - 1
             else:
                 p = slot - 2
@@ -862,13 +871,13 @@ def print_faculty_timetable(faculty_name: str, faculty_tt: Dict[int, Dict[int, s
         print(f"{day_name:<12}", end="")
 
         for slot in range(1, num_display_slots + 1):
-            if slot == 3 or slot == 6:
+            if slot == first_break_slot or slot == lunch_break_slot:
                 print(f"{'BREAK':<14}", end="")
             else:
                 # Map display slot to teaching period
-                if slot < 3:
+                if slot < first_break_slot:
                     p = slot
-                elif slot < 6:
+                elif slot < lunch_break_slot:
                     p = slot - 1
                 else:
                     p = slot - 2
@@ -1048,9 +1057,12 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
     if break_config is not None:
         break_periods = {
             'first': break_config.get('first_break_period', 2),
-            'lunch': break_config.get('lunch_break_period', 4),
-            'second': break_config.get('second_break_period', 6)
+            'lunch': break_config.get('lunch_break_period', 4)
         }
+    
+    # Calculate display slots dynamically: 7 periods + 2 breaks = 9 slots
+    global num_display_slots
+    num_display_slots = num_periods + 2
     
     # Reset assigned faculties for this generation
     assigned_multi_faculty = {}
