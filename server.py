@@ -1513,37 +1513,6 @@ def add_faculty():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/update-faculty/<faculty_id>', methods=['PUT'])
-def update_faculty(faculty_id):
-    try:
-        faculty = Faculty.query.filter_by(faculty_id=faculty_id).first()
-        if not faculty:
-            return jsonify({'error': 'Faculty not found'}), 404
-        
-        data = request.get_json()
-        
-        # Update only provided fields
-        if 'faculty_name' in data:
-            faculty.faculty_name = data['faculty_name']
-        if 'faculty_email' in data:
-            faculty.faculty_email = data.get('faculty_email')
-        if 'designation' in data:
-            if data['designation'] not in ['HOD', 'DEAN', 'PRINCIPAL', 'PROFESSOR']:
-                return jsonify({'error': 'Invalid designation'}), 400
-            faculty.designation = data['designation'].upper()
-        if 'dept_name' in data:
-            faculty.dept_name = data['dept_name']
-        if 'department' in data:
-            faculty.dept_name = data['department']
-        if 'faculty_password' in data and data['faculty_password']:
-            faculty.faculty_password = data['faculty_password']
-        
-        db.session.commit()
-        return jsonify({'ok': True, 'faculty': faculty.to_dict()}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 @app.route('/get_departments_for_admin', methods=['GET'])
 def get_departments_for_admin():
     try:

@@ -258,7 +258,7 @@
                 formData.faculty_password = password;
             }
 
-            fetch(`/update-faculty/${facultyId}`, {
+            fetch(`/faculty/${facultyId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
