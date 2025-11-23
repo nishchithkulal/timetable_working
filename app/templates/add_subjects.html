@@ -93,11 +93,6 @@
                     <input type="text" id="faculty" placeholder="Faculty name" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="hours">Hours per Week</label>
-                    <input type="number" id="hours" placeholder="e.g., 3" min="1" required>
-                </div>
-
                 <div class="checkbox-group">
                     <input type="checkbox" id="is_lab">
                     <label for="is_lab" style="margin-bottom: 0;">Is Lab Subject</label>
@@ -121,7 +116,6 @@
                             <th>Department</th>
                             <th>Section</th>
                             <th>Faculty</th>
-                            <th>Hours</th>
                             <th>Type</th>
                             <th>Last Class</th>
                             <th>Actions</th>
@@ -180,7 +174,7 @@
                 dept_name: document.getElementById('department').value,
                 section: document.getElementById('section').value,
                 faculty_name: document.getElementById('faculty').value,
-                hours: parseInt(document.getElementById('hours').value),
+                hours: 3,
                 lab: document.getElementById('is_lab').checked,
                 last: document.getElementById('is_last').checked,
                 college_id: sessionStorage.getItem('college_id')
@@ -227,7 +221,6 @@
                             <td>${s.dept_name}</td>
                             <td>${s.section}</td>
                             <td>${s.faculty_name}</td>
-                            <td>${s.hours}</td>
                             <td>${s.lab ? 'Lab' : 'Theory'}</td>
                             <td>${s.last ? 'Yes' : 'No'}</td>
                             <td><button onclick="editSubject(${s.id})" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 4px;">Edit</button><button onclick="deleteSubject(${s.id})" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
@@ -271,7 +264,6 @@
                     document.getElementById('subject_name').value = subject.subject_name;
                     document.getElementById('department').value = subject.dept_name;
                     document.getElementById('faculty').value = subject.faculty_name;
-                    document.getElementById('hours').value = subject.hours;
                     document.getElementById('is_lab').checked = subject.lab;
                     document.getElementById('is_last').checked = subject.last;
                     
@@ -294,7 +286,6 @@
             const formData = {
                 subject_name: document.getElementById('subject_name').value,
                 faculty_name: document.getElementById('faculty').value,
-                hours: parseInt(document.getElementById('hours').value),
                 lab: document.getElementById('is_lab').checked,
                 last: document.getElementById('is_last').checked
             };

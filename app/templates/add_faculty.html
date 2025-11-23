@@ -188,7 +188,7 @@
                             <td>${f.faculty_name}</td>
                             <td>${f.dept_name}</td>
                             <td>${f.designation}</td>
-                            <td><button onclick="deleteFaculty('${f.faculty_id}')" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
+                            <td><button onclick="editFaculty('${f.faculty_id}')" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 4px;">Edit</button><button onclick="deleteFaculty('${f.faculty_id}')" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
                         `;
                     });
                     table.style.display = 'table';
@@ -218,6 +218,64 @@
                     .then(d => { if (d.ok) loadFaculty(); })
                     .catch(console.error);
             }
+        }
+
+        function editFaculty(facultyId) {
+            fetch(`/get-faculty/${facultyId}`, { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    const faculty = data.faculty;
+                    document.getElementById('faculty_id').value = faculty.faculty_id;
+                    document.getElementById('faculty_name').value = faculty.faculty_name;
+                    document.getElementById('faculty_email').value = faculty.faculty_email || '';
+                    document.getElementById('department').value = faculty.dept_name;
+                    document.getElementById('designation').value = faculty.designation;
+                    document.getElementById('faculty_password').value = '';
+                    
+                    const btn = document.querySelector('.btn');
+                    btn.textContent = 'Update Faculty';
+                    btn.removeEventListener('click', null);
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        updateFaculty(facultyId);
+                    });
+                    
+                    document.getElementById('facultyForm').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(console.error);
+        }
+
+        function updateFaculty(facultyId) {
+            const formData = {
+                faculty_name: document.getElementById('faculty_name').value,
+                faculty_email: document.getElementById('faculty_email').value,
+                department: document.getElementById('department').value,
+                designation: document.getElementById('designation').value
+            };
+
+            const password = document.getElementById('faculty_password').value;
+            if (password) {
+                formData.faculty_password = password;
+            }
+
+            fetch(`/update-faculty/${facultyId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        showMessage('Faculty updated successfully!', 'success');
+                        document.getElementById('facultyForm').reset();
+                        document.querySelector('.btn').textContent = 'Add Faculty';
+                        loadFaculty();
+                    } else {
+                        showMessage(d.error || 'Failed to update faculty', 'error');
+                    }
+                })
+                .catch(console.error);
         }
 
         window.addEventListener('load', () => { loadDepartments(); loadFaculty(); });
