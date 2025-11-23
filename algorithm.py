@@ -10,6 +10,13 @@ faculties = {}              # Will be set dynamically
 strict_subject_placement = {}  # Will be set dynamically
 forbidden_subject_placement = {}  # Will be set dynamically
 
+# Break configuration - default values
+break_periods = {
+    'first': 2,      # First break after P2
+    'lunch': 4,      # Lunch break after P4
+    'second': 6      # Second break after P6
+}
+
 days = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 num_days = 5
 num_periods = 7  # Teaching periods
@@ -1010,7 +1017,7 @@ def section_timetable(section: str, all_timetables: Dict[str, Dict[int, Dict[int
     # return best effort if no success
     return best_tt, best_counters, False
 
-def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict=None, strict_constraints=None, forbidden_constraints=None):
+def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict=None, strict_constraints=None, forbidden_constraints=None, break_config=None):
     """Generate and return timetables for all sections.
     
     Args:
@@ -1019,11 +1026,12 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         faculty_dict: Dictionary mapping subject_name to faculty_name
         strict_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for fixed placements
         forbidden_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for forbidden placements
+        break_config: Dictionary {first_break_period, lunch_break_period, second_break_period} for break timings
     
     Returns a dictionary mapping section names to their timetables.
     Each timetable is a dictionary mapping day numbers (1-5) to dictionaries mapping period numbers (1-7) to subject names."""
     
-    global sections, subjects_per_section, faculties, assigned_multi_faculty, strict_subject_placement, forbidden_subject_placement
+    global sections, subjects_per_section, faculties, assigned_multi_faculty, strict_subject_placement, forbidden_subject_placement, break_periods
     
     # Set the global variables from parameters
     if section_list is not None:
@@ -1036,6 +1044,12 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         strict_subject_placement = strict_constraints
     if forbidden_constraints is not None:
         forbidden_subject_placement = forbidden_constraints
+    if break_config is not None:
+        break_periods = {
+            'first': break_config.get('first_break_period', 2),
+            'lunch': break_config.get('lunch_break_period', 4),
+            'second': break_config.get('second_break_period', 6)
+        }
     
     # Reset assigned faculties for this generation
     assigned_multi_faculty = {}

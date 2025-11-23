@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 try:
     from app.models.database import (
         db, Department, Admin, SectionTimetable, 
-        Subject, SubjectConstraint, Faculty, FacultyTimetable
+        Subject, SubjectConstraint, Faculty, FacultyTimetable, BreakConfiguration
     )
 except ImportError:
     logging.error("Failed to import from app.models. Make sure app folder structure is set up correctly.")
@@ -248,6 +248,42 @@ def build_constraints_from_db(dept_name: str, college_id: str):
         logging.exception("Error building constraints from database")
         return {}, {}
 
+def get_break_configuration(dept_name: str, college_id: str):
+    """
+    Fetch break configuration for a department.
+    
+    Returns:
+        dict: {first_break_period, lunch_break_period, second_break_period}
+        Format: {period_name: period_number, ...}
+    """
+    try:
+        break_config = BreakConfiguration.query.filter_by(
+            dept_name=dept_name, college_id=college_id
+        ).first()
+        
+        if break_config:
+            return {
+                'first_break_period': int(break_config.first_break_period),
+                'lunch_break_period': int(break_config.lunch_break_period),
+                'second_break_period': int(break_config.second_break_period)
+            }
+        else:
+            # Return default break configuration
+            return {
+                'first_break_period': 2,
+                'lunch_break_period': 4,
+                'second_break_period': 6
+            }
+        
+    except Exception as e:
+        logging.exception("Error fetching break configuration from database")
+        # Return default if error
+        return {
+            'first_break_period': 2,
+            'lunch_break_period': 4,
+            'second_break_period': 6
+        }
+
 @app.route('/generate-timetable', methods=['POST'])
 def generate_timetable():
     try:
@@ -273,6 +309,10 @@ def generate_timetable():
             strict_constraints, forbidden_constraints = build_constraints_from_db(dept_name, college_id)
             logging.info(f"Loaded constraints - Strict: {len(str(strict_constraints))}, Forbidden: {len(str(forbidden_constraints))}")
             
+            # Fetch break configuration for this department
+            break_config = get_break_configuration(dept_name, college_id)
+            logging.info(f"Loaded break configuration: {break_config}")
+            
             # Suppress algorithm debug output by redirecting stderr
             import sys
             import io
@@ -288,7 +328,8 @@ def generate_timetable():
                     subjects_dict=subjects_per_section,
                     faculty_dict=faculties,
                     strict_constraints=strict_constraints,
-                    forbidden_constraints=forbidden_constraints
+                    forbidden_constraints=forbidden_constraints,
+                    break_config=break_config
                 )
             finally:
                 # Restore stdout/stderr
@@ -428,6 +469,9 @@ def convert_timetable_dict_to_array(timetable_data):
 @app.route('/get-timetables', methods=['GET', 'POST'])
 def get_latest_timetables():
     try:
+        dept_name = None
+        college_id = None
+        
         if request.method == 'POST':
             data = request.get_json()
             dept_name = data.get('dept_name')
@@ -454,15 +498,25 @@ def get_latest_timetables():
                     logging.error(f"Error formatting timetable for section {t.section_name}: {str(e)}")
                     formatted_timetables[t.section_name] = [[None] * 7 for _ in range(5)]
             
+            # Get break configuration
+            break_config = get_break_configuration(dept_name, college_id)
+            
             return jsonify({
                 'ok': True,
-                'timetables': formatted_timetables
+                'timetables': formatted_timetables,
+                'break_config': break_config
             }), 200
         else:
             # Handle GET request - get most recent timetables
             latest_time = db.session.query(db.func.max(SectionTimetable.created_at)).scalar()
             if not latest_time:
                 return jsonify({'ok': False, 'error': 'No timetables found'}), 404
+            
+            # Get department info from latest timetable
+            latest_timetable = SectionTimetable.query.filter_by(created_at=latest_time).first()
+            if latest_timetable:
+                dept_name = latest_timetable.dept_name
+                college_id = latest_timetable.college_id
                 
             latest_timetables = SectionTimetable.query.filter_by(created_at=latest_time).all()
             
@@ -475,11 +529,18 @@ def get_latest_timetables():
                     logging.error(f"Error converting timetable for section {t.section_name}: {str(e)}")
                     formatted_timetables[t.section_name] = [[None] * 7 for _ in range(5)]
             
+            # Get break configuration if dept_name available
+            break_config = None
+            if dept_name and college_id:
+                break_config = get_break_configuration(dept_name, college_id)
+            
             result = {
                 'ok': True,
                 'timetables': formatted_timetables,
                 'created_at': latest_time.isoformat()
             }
+            if break_config:
+                result['break_config'] = break_config
         
         return jsonify(result), 200
         
@@ -1918,6 +1979,98 @@ def get_constraints_for_dept():
     
     except Exception as e:
         logging.exception("Failed to get constraints")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# ==================== BREAK CONFIGURATION ENDPOINTS ====================
+
+@app.route('/get-break-config', methods=['GET'])
+def get_break_config():
+    """Get break configuration for a department"""
+    try:
+        dept_name = request.args.get('dept_name')
+        college_id = session.get('college_id')
+        
+        if not college_id or not dept_name:
+            return jsonify({'ok': False, 'error': 'Missing parameters'}), 400
+        
+        break_config = BreakConfiguration.query.filter_by(
+            college_id=college_id,
+            dept_name=dept_name
+        ).first()
+        
+        if break_config:
+            return jsonify({'ok': True, 'break_config': break_config.to_dict()}), 200
+        else:
+            # Return default values if not configured
+            return jsonify({
+                'ok': True,
+                'break_config': {
+                    'college_id': college_id,
+                    'dept_name': dept_name,
+                    'first_break_period': '2',
+                    'lunch_break_period': '4',
+                    'second_break_period': '6'
+                }
+            }), 200
+    except Exception as e:
+        logging.exception("Failed to get break config")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/save-break-config', methods=['PUT'])
+def save_break_config():
+    """Save or update break configuration for a department (upsert operation)"""
+    try:
+        data = request.json
+        college_id = session.get('college_id')
+        dept_name = data.get('dept_name')
+        first_break = data.get('first_break_period', '2')
+        lunch_break = data.get('lunch_break_period', '4')
+        second_break = data.get('second_break_period', '6')
+        
+        if not college_id or not dept_name:
+            return jsonify({'ok': False, 'error': 'Missing parameters'}), 400
+        
+        # Validate period values (should be 1-7)
+        for period_val in [first_break, lunch_break, second_break]:
+            try:
+                p = int(period_val)
+                if p < 1 or p > 7:
+                    return jsonify({'ok': False, 'error': 'Period must be between 1-7'}), 400
+            except ValueError:
+                return jsonify({'ok': False, 'error': 'Period must be a number'}), 400
+        
+        # Check for duplicate periods
+        periods = [int(first_break), int(lunch_break), int(second_break)]
+        if len(periods) != len(set(periods)):
+            return jsonify({'ok': False, 'error': 'Break periods must be different'}), 400
+        
+        # Upsert: Find existing or create new
+        break_config = BreakConfiguration.query.filter_by(
+            college_id=college_id,
+            dept_name=dept_name
+        ).first()
+        
+        if break_config:
+            # Update existing
+            break_config.first_break_period = first_break
+            break_config.lunch_break_period = lunch_break
+            break_config.second_break_period = second_break
+        else:
+            # Create new
+            break_config = BreakConfiguration(
+                college_id=college_id,
+                dept_name=dept_name,
+                first_break_period=first_break,
+                lunch_break_period=lunch_break,
+                second_break_period=second_break
+            )
+            db.session.add(break_config)
+        
+        db.session.commit()
+        return jsonify({'ok': True, 'break_config': break_config.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        logging.exception("Failed to save break config")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 # Error handler for 404 Not Found

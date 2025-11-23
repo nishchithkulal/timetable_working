@@ -230,6 +230,59 @@
 
                 </div>
 
+                <!-- Break Configuration Section (appears after dept selection) -->
+                <div id="breakConfigSection" style="display: none; background: #f9fafb; padding: 20px; border-radius: 12px; margin-top: 20px; margin-bottom: 20px; border-left: 4px solid #9b59b6;">
+                    <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 16px;">⏰ Break Configuration</h3>
+                    <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 16px;">Set when the 2 breaks and lunch break should appear for this department</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="firstBreakPeriod">First Break</label>
+                            <select id="firstBreakPeriod">
+                                <option value="">Select period</option>
+                                <option value="1">Period 1</option>
+                                <option value="2">Period 2</option>
+                                <option value="3">Period 3</option>
+                                <option value="4">Period 4</option>
+                                <option value="5">Period 5</option>
+                                <option value="6">Period 6</option>
+                                <option value="7">Period 7</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="lunchBreakPeriod">Lunch Break</label>
+                            <select id="lunchBreakPeriod">
+                                <option value="">Select period</option>
+                                <option value="1">Period 1</option>
+                                <option value="2">Period 2</option>
+                                <option value="3">Period 3</option>
+                                <option value="4">Period 4</option>
+                                <option value="5">Period 5</option>
+                                <option value="6">Period 6</option>
+                                <option value="7">Period 7</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="secondBreakPeriod">Second Break</label>
+                            <select id="secondBreakPeriod">
+                                <option value="">Select period</option>
+                                <option value="1">Period 1</option>
+                                <option value="2">Period 2</option>
+                                <option value="3">Period 3</option>
+                                <option value="4">Period 4</option>
+                                <option value="5">Period 5</option>
+                                <option value="6">Period 6</option>
+                                <option value="7">Period 7</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                        <button id="saveBreakConfigBtn" class="btn" style="flex: 1; background: #9b59b6; box-shadow: 0 8px 24px rgba(155, 89, 182, 0.35);">💾 Confirm Break</button>
+                    </div>
+                    <div id="breakConfigStatus" style="color: #2c3e50; font-size: 13px; font-weight: 500; min-height: 18px;"></div>
+                </div>
+
                 <button id="generateButton" class="btn" disabled>Generate Timetable</button>
                 <div id="statusMessage" class="status-message"></div>
             </div>
@@ -471,17 +524,20 @@
         document.getElementById('department').addEventListener('change', async function() {
             const dept = this.value;
             const constraintSection = document.getElementById('constraintSection');
+            const breakConfigSection = document.getElementById('breakConfigSection');
             const formSubject = document.getElementById('formSubject');
             const collegeId = sessionStorage.getItem('college_id');
             
             if (!dept) {
                 constraintSection.style.display = 'none';
+                breakConfigSection.style.display = 'none';
                 document.getElementById('generateButton').disabled = true;
                 return;
             }
             
-            // Enable constraint section
+            // Enable constraint section and break config section
             constraintSection.style.display = 'block';
+            breakConfigSection.style.display = 'block';
             document.getElementById('generateButton').disabled = false;
             
             // Load subjects for this department
@@ -512,9 +568,97 @@
             
             // Load existing constraints for this department
             await loadConstraintsForDept(dept, collegeId);
+            
+            // Load existing break configuration for this department
+            await loadBreakConfig(dept, collegeId);
         });
 
-        // Load constraints for selected department
+        // Load break configuration
+        async function loadBreakConfig(dept, collegeId) {
+            if (!dept || !collegeId) return;
+            
+            try {
+                const response = await fetch(`/get-break-config?dept_name=${encodeURIComponent(dept)}&college_id=${collegeId}`, 
+                    { credentials: 'include' });
+                const data = await response.json();
+                
+                if (data.ok && data.break_config) {
+                    document.getElementById('firstBreakPeriod').value = data.break_config.first_break_period || '2';
+                    document.getElementById('lunchBreakPeriod').value = data.break_config.lunch_break_period || '4';
+                    document.getElementById('secondBreakPeriod').value = data.break_config.second_break_period || '6';
+                    document.getElementById('breakConfigStatus').textContent = '✓ Loaded existing configuration';
+                    document.getElementById('breakConfigStatus').style.color = '#2ecc71';
+                } else {
+                    // Use defaults
+                    document.getElementById('firstBreakPeriod').value = '2';
+                    document.getElementById('lunchBreakPeriod').value = '4';
+                    document.getElementById('secondBreakPeriod').value = '6';
+                    document.getElementById('breakConfigStatus').textContent = 'Using default configuration';
+                    document.getElementById('breakConfigStatus').style.color = '#3498db';
+                }
+            } catch (error) {
+                console.error('Error loading break config:', error);
+                document.getElementById('breakConfigStatus').textContent = '⚠️ Could not load configuration';
+                document.getElementById('breakConfigStatus').style.color = '#e74c3c';
+            }
+        }
+
+        // Save break configuration
+        document.getElementById('saveBreakConfigBtn').addEventListener('click', async function() {
+            const dept = document.getElementById('department').value;
+            const collegeId = sessionStorage.getItem('college_id');
+            const firstBreak = document.getElementById('firstBreakPeriod').value;
+            const lunchBreak = document.getElementById('lunchBreakPeriod').value;
+            const secondBreak = document.getElementById('secondBreakPeriod').value;
+            const statusDiv = document.getElementById('breakConfigStatus');
+            
+            if (!firstBreak || !lunchBreak || !secondBreak) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = '❌ Please select all break periods';
+                return;
+            }
+            
+            // Check for duplicate periods
+            const periods = [parseInt(firstBreak), parseInt(lunchBreak), parseInt(secondBreak)];
+            if (new Set(periods).size !== periods.length) {
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = '❌ Break periods must be different';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/save-break-config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        college_id: collegeId,
+                        dept_name: dept,
+                        first_break_period: firstBreak,
+                        lunch_break_period: lunchBreak,
+                        second_break_period: secondBreak
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.ok) {
+                    statusDiv.style.color = '#2ecc71';
+                    statusDiv.textContent = '✓ Break configuration saved successfully!';
+                } else {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.textContent = `❌ ${data.error || 'Failed to save configuration'}`;
+                }
+            } catch (error) {
+                console.error('Error saving break config:', error);
+                statusDiv.style.color = '#e74c3c';
+                statusDiv.textContent = '❌ Error saving configuration';
+            }
+        });
+
+        // Load break configuration button removed - auto-loads on department change
+        
+        document.addEventListener('DOMContentLoaded', loadDepartments);
         async function loadConstraintsForDept(dept, collegeId) {
             if (!dept || !collegeId) return;
             

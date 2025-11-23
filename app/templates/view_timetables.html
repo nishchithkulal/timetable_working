@@ -117,6 +117,11 @@
         let allTimetables = {};
         let allFacultyTimetables = {};
         let currentViewMode = 'section'; // 'section' or 'faculty'
+        let breakConfig = {
+            first: 2,
+            lunch: 4,
+            second: 6
+        };
 
         async function loadSections() {
             try {
@@ -139,6 +144,17 @@
                 const data = await response.json();
                 if (response.ok && data.timetables) {
                     allTimetables = data.timetables;
+                    
+                    // Get break configuration if available
+                    if (data.break_config) {
+                        breakConfig = {
+                            first: data.break_config.first_break_period,
+                            lunch: data.break_config.lunch_break_period,
+                            second: data.break_config.second_break_period
+                        };
+                        console.log('Loaded break config:', breakConfig);
+                    }
+                    
                     populateSectionSelect();
                     displaySectionTimetables();
                 } else {
@@ -236,29 +252,29 @@
             const sectionDiv = document.createElement('div');
             sectionDiv.className = 'dept-section';
             
+            // Build table header dynamically based on break configuration
+            let headerHtml = '<tr><th>Day / Period</th>';
+            for (let p = 1; p <= 7; p++) {
+                headerHtml += `<th>P${p}</th>`;
+                // Add break cell after the break periods
+                if (p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) {
+                    headerHtml += '<th style="background: #dbeafe;">Break</th>';
+                }
+            }
+            headerHtml += '</tr>';
+            
             let html = `
                 <div class="dept-card">
                     <h3 class="dept-title"><span class="material-icons" style="color: #3498db; font-size: 24px;">schedule</span>${title}</h3>
                     <div class="timetable-wrapper">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>Day / Period</th>
-                                    <th>P1</th>
-                                    <th>P2</th>
-                                    <th style="background: #dbeafe;">Break</th>
-                                    <th>P3</th>
-                                    <th>P4</th>
-                                    <th style="background: #dbeafe;">Break</th>
-                                    <th>P5</th>
-                                    <th>P6</th>
-                                    <th>P7</th>
-                                </tr>
+                                ${headerHtml}
                             </thead>
                             <tbody>
             `;
 
-            // Handle array format with 7 periods (breaks inserted at display indices 2 and 5)
+            // Handle array format with 7 periods
             if (Array.isArray(timetableData)) {
                 days.forEach((day, dayIdx) => {
                     html += '<tr>';
@@ -266,29 +282,25 @@
                     
                     if (timetableData[dayIdx] && Array.isArray(timetableData[dayIdx])) {
                         const daySchedule = timetableData[dayIdx];
-                        let displaySlots = [
-                            daySchedule[0], // P1
-                            daySchedule[1], // P2
-                            'Break',         // Break after P2
-                            daySchedule[2], // P3
-                            daySchedule[3], // P4
-                            'Break',         // Break after P4
-                            daySchedule[4], // P5
-                            daySchedule[5], // P6
-                            daySchedule[6]  // P7
-                        ];
                         
-                        displaySlots.forEach((slot, displayIdx) => {
-                            const isBreak = displayIdx === 2 || displayIdx === 5;
-                            let cellClass = isBreak ? 'break-cell' : (slot ? '' : 'empty-cell');
-                            // For faculty timetables, slots may have newlines (section info), so replace them
-                            let content = isBreak ? 'Break' : (slot ? String(slot).substring(0, 25).replace(/\n/g, ' ') : '-');
+                        // Build display slots based on break configuration
+                        for (let p = 1; p <= 7; p++) {
+                            let content = daySchedule[p - 1] ? String(daySchedule[p - 1]).substring(0, 25).replace(/\n/g, ' ') : '-';
+                            let cellClass = daySchedule[p - 1] ? '' : 'empty-cell';
                             html += `<td class="${cellClass}">${content}</td>`;
-                        });
+                            
+                            // Add break cell after the break periods (but not after P7)
+                            if ((p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) && p !== 7) {
+                                html += '<td class="break-cell">Break</td>';
+                            }
+                        }
                     } else {
-                        for (let i = 0; i < 9; i++) {
-                            const isBreak = i === 2 || i === 5;
-                            html += `<td class="${isBreak ? 'break-cell' : 'empty-cell'}">${isBreak ? 'Break' : '-'}</td>`;
+                        for (let p = 1; p <= 7; p++) {
+                            html += `<td class="empty-cell">-</td>`;
+                            // Add break cells (but not after P7)
+                            if ((p === breakConfig.first || p === breakConfig.lunch || p === breakConfig.second) && p !== 7) {
+                                html += '<td class="break-cell">Break</td>';
+                            }
                         }
                     }
                     html += '</tr>';
