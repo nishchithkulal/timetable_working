@@ -970,7 +970,7 @@ def add_subject():
 @app.route('/get-subjects', methods=['GET'])
 def get_subjects():
     try:
-        # Support both college_id filter and dept_name/section filter
+        # Support multiple filter modes
         college_id = request.args.get('college_id')
         dept_name = request.args.get('dept_name')
         section = request.args.get('section')
@@ -1005,12 +1005,25 @@ def get_subjects():
                     unique_subjects.append(subj)
             unique_subjects = sorted(unique_subjects, key=lambda x: x['name'])
             logging.info(f"Subject metadata: {unique_subjects}")
+        elif dept_name:
+            # Filter by department only (for constraint form - needs all subjects in dept)
+            subjects = Subject.query.filter_by(dept_name=dept_name).all()
+            logging.info(f"Found {len(subjects)} subjects for {dept_name}")
+            # Deduplicate and sort by subject name
+            seen = set()
+            unique_subjects = []
+            for subject in subjects:
+                if subject.subject_name not in seen:
+                    seen.add(subject.subject_name)
+                    unique_subjects.append({'name': subject.subject_name})
+            unique_subjects = sorted(unique_subjects, key=lambda x: x['name'])
+            logging.info(f"Unique subjects for constraint form: {unique_subjects}")
         elif college_id:
             # Filter by college_id (old behavior)
             subjects = Subject.query.filter_by(college_id=college_id).all()
             unique_subjects = [subject.to_dict() for subject in subjects]
         else:
-            return jsonify({'ok': False, 'error': 'Either college_id or (dept_name and section) is required'}), 400
+            return jsonify({'ok': False, 'error': 'Either college_id or dept_name is required'}), 400
         
         return jsonify({
             'ok': True,
@@ -1752,16 +1765,28 @@ def add_constraint():
     """Add a single constraint (strict or forbidden) for a subject"""
     try:
         data = request.get_json()
+        logging.info(f"add-constraint request data: {data}")
+        
         college_id = data.get('college_id')
         dept_name = data.get('dept_name')
-        section = data.get('section')
+        section = data.get('section', '')  # Optional - defaults to empty string for dept-wide constraints
         subject = data.get('subject')
         day = data.get('day')  # 1-5 for Mon-Fri
         period = data.get('period')  # 1-7
         constraint_type = data.get('constraint_type')  # 'strict' or 'forbidden'
         
-        if not all([college_id, dept_name, section, subject, day, period, constraint_type]):
-            return jsonify({'ok': False, 'error': 'All fields are required'}), 400
+        logging.info(f"Parsed: college_id={college_id}, dept_name={dept_name}, subject={subject}, day={day}, period={period}, constraint_type={constraint_type}")
+        
+        if not all([college_id, dept_name, subject, day, period, constraint_type]):
+            missing = []
+            if not college_id: missing.append('college_id')
+            if not dept_name: missing.append('dept_name')
+            if not subject: missing.append('subject')
+            if not day: missing.append('day')
+            if not period: missing.append('period')
+            if not constraint_type: missing.append('constraint_type')
+            logging.error(f"Missing fields: {missing}")
+            return jsonify({'ok': False, 'error': f'Missing fields: {missing}'}), 400
         
         if constraint_type not in ['strict', 'forbidden']:
             return jsonify({'ok': False, 'error': 'constraint_type must be strict or forbidden'}), 400
@@ -1774,7 +1799,7 @@ def add_constraint():
         # Check if constraint already exists
         existing = SubjectConstraint.query.filter_by(
             college_id=college_id, dept_name=dept_name, section=section,
-            subject=subject, day=day, period=period, constraint_type=constraint_type
+            subject=subject, day=str(day), period=str(period), constraint_type=constraint_type
         ).first()
         
         if existing:
@@ -1786,8 +1811,8 @@ def add_constraint():
             dept_name=dept_name,
             section=section,
             subject=subject,
-            day=day,
-            period=int(period),
+            day=str(day),  # Convert to string to match database column type
+            period=str(period),  # Convert to string to match database column type
             constraint_type=constraint_type
         )
         
@@ -1817,6 +1842,44 @@ def delete_constraint(constraint_id):
         logging.exception("Failed to delete constraint")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/update-constraint/<int:constraint_id>', methods=['PUT'])
+def update_constraint(constraint_id):
+    """Update an existing constraint"""
+    try:
+        constraint = SubjectConstraint.query.get(constraint_id)
+        if not constraint:
+            return jsonify({'ok': False, 'error': 'Constraint not found'}), 404
+        
+        data = request.get_json()
+        subject = data.get('subject')
+        day = data.get('day')
+        period = data.get('period')
+        constraint_type = data.get('constraint_type')
+        
+        # Validate inputs
+        if not all([subject, day, period, constraint_type]):
+            return jsonify({'ok': False, 'error': 'All fields are required'}), 400
+        
+        if constraint_type not in ['strict', 'forbidden']:
+            return jsonify({'ok': False, 'error': 'constraint_type must be strict or forbidden'}), 400
+        
+        if not (1 <= int(day) <= 5) or not (1 <= int(period) <= 7):
+            return jsonify({'ok': False, 'error': 'Invalid day (1-5) or period (1-7)'}), 400
+        
+        # Update constraint
+        constraint.subject = subject
+        constraint.day = str(day)  # Convert to string to match database column type
+        constraint.period = str(period)  # Convert to string to match database column type
+        constraint.constraint_type = constraint_type
+        
+        db.session.commit()
+        
+        return jsonify({'ok': True, 'constraint_id': constraint.id}), 200
+    
+    except Exception as e:
+        logging.exception("Failed to update constraint")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/get-constraints-for-dept', methods=['GET'])
 def get_constraints_for_dept():
     """Get all constraints for a department, optionally filtered by section"""
@@ -1835,27 +1898,22 @@ def get_constraints_for_dept():
         
         constraints = query.all()
         
-        # Organize by constraint type
-        strict_constraints = []
-        forbidden_constraints = []
-        
+        # Return all constraints with their type information
+        all_constraints = []
         for c in constraints:
             constraint_data = {
                 'id': c.id,
                 'section': c.section,
                 'subject': c.subject,
                 'day': c.day,
-                'period': c.period
+                'period': c.period,
+                'constraint_type': c.constraint_type
             }
-            if c.constraint_type == 'strict':
-                strict_constraints.append(constraint_data)
-            else:
-                forbidden_constraints.append(constraint_data)
+            all_constraints.append(constraint_data)
         
         return jsonify({
             'ok': True,
-            'strict': strict_constraints,
-            'forbidden': forbidden_constraints
+            'constraints': all_constraints
         }), 200
     
     except Exception as e:

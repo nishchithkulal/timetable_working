@@ -153,53 +153,33 @@
                         <option value="" disabled selected>Loading departments...</option>
                     </select>
                 </div>
-                <button id="generateButton" class="btn" disabled>Generate Timetable</button>
-                <div id="statusMessage" class="status-message"></div>
-            </div>
 
-            <!-- Constraint Management Section -->
-            <div class="card generator-card">
-                <h2>Manage Constraints</h2>
-                <div class="form-group">
-                    <label for="constraintDept">Select Department</label>
-                    <select id="constraintDept" disabled>
-                        <option value="" disabled selected>Loading departments...</option>
-                    </select>
-                </div>
-                
-                <div id="constraintContent" style="display: none;">
-                    <div class="form-group">
-                        <label for="constraintSection">Select Section</label>
-                        <select id="constraintSection" disabled>
-                            <option value="" disabled selected>Select a section</option>
-                        </select>
-                    </div>
+                <!-- Constraint Management Section (appears after dept selection) -->
+                <div id="constraintSection" style="display: none; background: #f9fafb; padding: 20px; border-radius: 12px; margin-top: 20px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+                    <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 16px;">⚙️ Add Constraints for Selected Department</h3>
                     
-                    <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-top: 20px;">
-                        <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 16px;">Add New Constraint</h3>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <button id="addStrictBtn" class="btn" style="background: #2ecc71; box-shadow: 0 8px 24px rgba(46, 204, 113, 0.35);">📌 Add Strict Constraint</button>
+                        <button id="addForbiddenBtn" class="btn" style="background: #e74c3c; box-shadow: 0 8px 24px rgba(231, 76, 60, 0.35);">🚫 Add Forbidden Constraint</button>
+                    </div>
+
+                    <!-- Constraint Form (hidden by default, shown when buttons clicked) -->
+                    <div id="constraintFormContainer" style="display: none; background: white; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 2px solid #e8eef5;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h4 id="constraintFormTitle" style="color: #1e3a5f; margin: 0;">Add Constraint</h4>
+                            <button onclick="closeConstraintForm()" style="background: none; border: none; color: #999; font-size: 24px; cursor: pointer; padding: 0;">✕</button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label for="constraintType">Constraint Type</label>
-                                <select id="constraintType">
-                                    <option value="">Select type</option>
-                                    <option value="strict">Strict (Fixed Placement)</option>
-                                    <option value="forbidden">Forbidden (Not Allowed)</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label for="constraintSubject">Subject</label>
-                                <select id="constraintSubject" disabled>
+                                <label for="formSubject">Subject</label>
+                                <select id="formSubject" disabled>
                                     <option value="">Select subject</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label for="constraintDay">Day</label>
-                                <select id="constraintDay" disabled>
+                                <label for="formDay">Day</label>
+                                <select id="formDay">
                                     <option value="">Select day</option>
                                     <option value="1">Monday</option>
                                     <option value="2">Tuesday</option>
@@ -208,10 +188,12 @@
                                     <option value="5">Friday</option>
                                 </select>
                             </div>
-                            
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label for="constraintPeriod">Period</label>
-                                <select id="constraintPeriod" disabled>
+                                <label for="formPeriod">Period</label>
+                                <select id="formPeriod">
                                     <option value="">Select period</option>
                                     <option value="1">Period 1</option>
                                     <option value="2">Period 2</option>
@@ -222,27 +204,34 @@
                                     <option value="7">Period 7</option>
                                 </select>
                             </div>
-                            
-                            <div class="form-group" style="margin-bottom: 0; display: flex; align-items: flex-end;">
-                                <button id="addConstraintBtn" class="btn" style="width: 100%; margin-bottom: 0;" disabled>Add Constraint</button>
+                            <button id="submitConstraintBtn" class="btn" style="grid-column: 2/4;">Save Constraint</button>
+                        </div>
+                        <div id="constraintFormStatus" style="color: #e74c3c; font-size: 12px; font-weight: 500;"></div>
+
+                        <!-- Display Constraints of Selected Type -->
+                        <div id="constraintTypeDisplay" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 2px solid #e8eef5;">
+                            <h5 id="constraintTypeTitle" style="color: #1e3a5f; margin-bottom: 12px; font-size: 14px;"></h5>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: #f0f7ff; border-bottom: 2px solid #3498db;">
+                                            <th style="padding: 10px; text-align: left; color: #1e3a5f; font-weight: 600; font-size: 12px;">Subject</th>
+                                            <th style="padding: 10px; text-align: left; color: #1e3a5f; font-weight: 600; font-size: 12px;">Day</th>
+                                            <th style="padding: 10px; text-align: left; color: #1e3a5f; font-weight: 600; font-size: 12px;">Period</th>
+                                            <th style="padding: 10px; text-align: center; color: #1e3a5f; font-weight: 600; font-size: 12px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="constraintTypeBody">
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        
-                        <div id="constraintStatus" class="status-message"></div>
                     </div>
-                    
-                    <!-- Display Strict Constraints -->
-                    <div id="strictConstraintsSection" style="margin-top: 24px; display: none;">
-                        <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 12px;">📌 Strict Constraints (Fixed Placements)</h3>
-                        <div id="strictConstraintsList" style="background: #f0f9ff; padding: 12px; border-radius: 8px; border-left: 4px solid #3498db;"></div>
-                    </div>
-                    
-                    <!-- Display Forbidden Constraints -->
-                    <div id="forbiddenConstraintsSection" style="margin-top: 24px; display: none;">
-                        <h3 style="color: #1e3a5f; font-size: 16px; margin-bottom: 12px;">🚫 Forbidden Constraints (Not Allowed)</h3>
-                        <div id="forbiddenConstraintsList" style="background: #fef3f2; padding: 12px; border-radius: 8px; border-left: 4px solid #e74c3c;"></div>
-                    </div>
+
                 </div>
+
+                <button id="generateButton" class="btn" disabled>Generate Timetable</button>
+                <div id="statusMessage" class="status-message"></div>
             </div>
 
             <div id="message" class="message"></div>
@@ -450,238 +439,278 @@
             }
         });
 
+        // Event Listeners and Initialization
         async function loadDepartments() {
             try {
                 const collegeId = sessionStorage.getItem('college_id');
                 if (!collegeId) {
-                    window.location.href = '/admin-login';
+                    console.error('No college_id in session storage');
                     return;
                 }
-
-                const response = await fetch(`/get-departments?college_id=${collegeId}`, {
-                    headers: { 'Accept': 'application/json' },
-                    credentials: 'include'
-                });
                 
+                const response = await fetch(`/get-departments?college_id=${collegeId}`, { 
+                    credentials: 'include' 
+                });
                 const data = await response.json();
-                const deptSelect = document.getElementById('department');
-                const constraintDeptSelect = document.getElementById('constraintDept');
-                const generateButton = document.getElementById('generateButton');
                 
-                deptSelect.innerHTML = '<option value="">Select Department</option>';
-                constraintDeptSelect.innerHTML = '<option value="">Select Department</option>';
-                
-                data.departments.forEach(dept => {
-                    const option1 = document.createElement('option');
-                    option1.value = dept.name;
-                    option1.textContent = dept.name;
-                    deptSelect.appendChild(option1);
-                    
-                    const option2 = document.createElement('option');
-                    option2.value = dept.name;
-                    option2.textContent = dept.name;
-                    constraintDeptSelect.appendChild(option2);
-                });
-                
-                deptSelect.disabled = false;
-                constraintDeptSelect.disabled = false;
-                
-                deptSelect.addEventListener('change', () => {
-                    generateButton.disabled = !deptSelect.value;
-                });
-                
-                constraintDeptSelect.addEventListener('change', onConstraintDeptChange);
+                if (data.departments && Array.isArray(data.departments)) {
+                    const deptSelect = document.getElementById('department');
+                    deptSelect.innerHTML = '<option value="" disabled selected>Select a department</option>';
+                    data.departments.forEach(dept => {
+                        const deptName = typeof dept === 'string' ? dept : dept.name;
+                        deptSelect.innerHTML += `<option value="${deptName}">${deptName}</option>`;
+                    });
+                    deptSelect.disabled = false;
+                }
             } catch (error) {
                 console.error('Error loading departments:', error);
-                document.getElementById('statusMessage').style.color = '#e74c3c';
-                document.getElementById('statusMessage').textContent = 'Failed to load departments';
             }
         }
 
-        // Constraint Management Functions
-        let allSubjects = {}; // {dept: {section: [subjects]}}
-        let currentSubjects = []; // Subjects for selected dept+section
-
-        async function onConstraintDeptChange() {
-            const deptName = document.getElementById('constraintDept').value;
-            const sectionSelect = document.getElementById('constraintSection');
-            const contentDiv = document.getElementById('constraintContent');
+        // Handle department change - show constraints section and load subjects
+        document.getElementById('department').addEventListener('change', async function() {
+            const dept = this.value;
+            const constraintSection = document.getElementById('constraintSection');
+            const formSubject = document.getElementById('formSubject');
+            const collegeId = sessionStorage.getItem('college_id');
             
-            if (!deptName) {
-                contentDiv.style.display = 'none';
+            if (!dept) {
+                constraintSection.style.display = 'none';
+                document.getElementById('generateButton').disabled = true;
                 return;
             }
             
+            // Enable constraint section
+            constraintSection.style.display = 'block';
+            document.getElementById('generateButton').disabled = false;
+            
+            // Load subjects for this department
             try {
-                // Get sections for this department
-                const response = await fetch(`/get-sections?dept_name=${encodeURIComponent(deptName)}`, {
-                    credentials: 'include'
-                });
+                const response = await fetch(`/get-subjects?dept_name=${encodeURIComponent(dept)}&college_id=${collegeId}`, 
+                    { credentials: 'include' });
                 const data = await response.json();
                 
-                sectionSelect.innerHTML = '<option value="">Select Section</option>';
-                data.sections.forEach(section => {
-                    const option = document.createElement('option');
-                    option.value = section;
-                    option.textContent = `Section ${section}`;
-                    sectionSelect.appendChild(option);
-                });
-                
-                sectionSelect.disabled = false;
-                contentDiv.style.display = 'block';
-                
-                // Load subjects
-                await loadSubjectsForDept(deptName);
-                
-                // Load constraints
-                sectionSelect.addEventListener('change', loadConstraintsForSection);
-            } catch (error) {
-                console.error('Error loading sections:', error);
-            }
-        }
-
-        async function loadSubjectsForDept(deptName) {
-            try {
-                const response = await fetch(`/get-subjects?dept_name=${encodeURIComponent(deptName)}`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                
-                if (data.ok) {
-                    const subjectSelect = document.getElementById('constraintSubject');
-                    subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+                if (data.ok && data.subjects) {
+                    formSubject.innerHTML = '<option value="">Select subject</option>';
+                    formSubject.disabled = false;
                     
-                    // Extract unique subjects
-                    const uniqueSubjects = [...new Set(data.subjects.map(s => s.subject_name))];
-                    uniqueSubjects.forEach(subject => {
-                        const option = document.createElement('option');
-                        option.value = subject;
-                        option.textContent = subject;
-                        subjectSelect.appendChild(option);
+                    // Handle both formats: {name: 'Subject'} and full objects
+                    data.subjects.forEach(subject => {
+                        const subjectName = typeof subject === 'string' ? subject : (subject.name || subject.subject_name);
+                        if (subjectName) {
+                            formSubject.innerHTML += `<option value="${subjectName}">${subjectName}</option>`;
+                        }
                     });
                     
-                    subjectSelect.disabled = false;
+                    console.log('Subjects loaded:', data.subjects.length);
+                } else {
+                    console.error('No subjects returned:', data);
                 }
             } catch (error) {
                 console.error('Error loading subjects:', error);
             }
-        }
-
-        async function loadConstraintsForSection() {
-            const deptName = document.getElementById('constraintDept').value;
-            const sectionName = document.getElementById('constraintSection').value;
-            const collegeId = sessionStorage.getItem('college_id');
             
-            if (!deptName || !sectionName) return;
+            // Load existing constraints for this department
+            await loadConstraintsForDept(dept, collegeId);
+        });
+
+        // Load constraints for selected department
+        async function loadConstraintsForDept(dept, collegeId) {
+            if (!dept || !collegeId) return;
             
             try {
-                const response = await fetch(
-                    `/get-constraints-for-dept?college_id=${encodeURIComponent(collegeId)}&dept_name=${encodeURIComponent(deptName)}&section=${encodeURIComponent(sectionName)}`,
-                    { credentials: 'include' }
-                );
+                const response = await fetch(`/get-constraints-for-dept?dept_name=${encodeURIComponent(dept)}&college_id=${collegeId}`, 
+                    { credentials: 'include' });
                 const data = await response.json();
                 
-                displayConstraints(data.strict, data.forbidden);
+                // Store all constraints globally for use in display functions
+                if (data.constraints && Array.isArray(data.constraints)) {
+                    window.allConstraints = data.constraints;
+                } else {
+                    window.allConstraints = [];
+                }
             } catch (error) {
                 console.error('Error loading constraints:', error);
+                window.allConstraints = [];
             }
         }
 
-        function displayConstraints(strictConstraints, forbiddenConstraints) {
-            const strictSection = document.getElementById('strictConstraintsSection');
-            const forbiddenSection = document.getElementById('forbiddenConstraintsSection');
-            const strictList = document.getElementById('strictConstraintsList');
-            const forbiddenList = document.getElementById('forbiddenConstraintsList');
+        // Show constraint form for strict constraint
+        document.getElementById('addStrictBtn').addEventListener('click', function() {
+            document.getElementById('constraintFormTitle').textContent = '📌 Add Strict Constraint (Fixed Placement)';
+            document.getElementById('constraintFormContainer').style.display = 'block';
+            document.getElementById('submitConstraintBtn').dataset.constraintType = 'strict';
+            document.getElementById('submitConstraintBtn').dataset.constraintId = '';
+            document.getElementById('formSubject').value = '';
+            document.getElementById('formDay').value = '';
+            document.getElementById('formPeriod').value = '';
+            document.getElementById('constraintFormStatus').textContent = '';
             
-            const dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-            
-            // Display strict constraints
-            if (strictConstraints.length > 0) {
-                strictList.innerHTML = strictConstraints.map(c => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; margin: 4px 0; border-radius: 6px;">
-                        <span><strong>${c.subject}</strong> - ${dayNames[c.day]}, Period ${c.period}</span>
-                        <button onclick="deleteConstraint(${c.id})" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
-                    </div>
-                `).join('');
-                strictSection.style.display = 'block';
-            } else {
-                strictSection.style.display = 'none';
-            }
-            
-            // Display forbidden constraints
-            if (forbiddenConstraints.length > 0) {
-                forbiddenList.innerHTML = forbiddenConstraints.map(c => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: white; margin: 4px 0; border-radius: 6px;">
-                        <span><strong>${c.subject}</strong> - ${dayNames[c.day]}, Period ${c.period}</span>
-                        <button onclick="deleteConstraint(${c.id})" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>
-                    </div>
-                `).join('');
-                forbiddenSection.style.display = 'block';
-            } else {
-                forbiddenSection.style.display = 'none';
-            }
-        }
+            // Display strict constraints in the table
+            displayConstraintsOfType('strict');
+        });
 
-        async function addConstraint() {
+        // Show constraint form for forbidden constraint
+        document.getElementById('addForbiddenBtn').addEventListener('click', function() {
+            document.getElementById('constraintFormTitle').textContent = '🚫 Add Forbidden Constraint (Not Allowed)';
+            document.getElementById('constraintFormContainer').style.display = 'block';
+            document.getElementById('submitConstraintBtn').dataset.constraintType = 'forbidden';
+            document.getElementById('submitConstraintBtn').dataset.constraintId = '';
+            document.getElementById('formSubject').value = '';
+            document.getElementById('formDay').value = '';
+            document.getElementById('formPeriod').value = '';
+            document.getElementById('constraintFormStatus').textContent = '';
+            
+            // Display forbidden constraints in the table
+            displayConstraintsOfType('forbidden');
+        });
+
+        // Display constraints of specific type inside the form
+        function displayConstraintsOfType(constraintType) {
+            const dept = document.getElementById('department').value;
             const collegeId = sessionStorage.getItem('college_id');
-            const deptName = document.getElementById('constraintDept').value;
-            const section = document.getElementById('constraintSection').value;
-            const constraintType = document.getElementById('constraintType').value;
-            const subject = document.getElementById('constraintSubject').value;
-            const day = document.getElementById('constraintDay').value;
-            const period = document.getElementById('constraintPeriod').value;
-            const statusDiv = document.getElementById('constraintStatus');
             
-            if (!deptName || !section || !constraintType || !subject || !day || !period) {
+            if (!dept || !collegeId) return;
+            
+            // Find constraints from already loaded data
+            const constraints = window.allConstraints || [];
+            const filteredConstraints = constraints.filter(c => c.constraint_type === constraintType);
+            
+            const tableBody = document.getElementById('constraintTypeBody');
+            const typeDisplay = document.getElementById('constraintTypeDisplay');
+            const typeTitle = document.getElementById('constraintTypeTitle');
+            
+            tableBody.innerHTML = '';
+            
+            if (filteredConstraints.length > 0) {
+                const dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                const typeLabel = constraintType === 'strict' ? '📌 Strict' : '🚫 Forbidden';
+                typeTitle.textContent = `${typeLabel} Constraints`;
+                
+                filteredConstraints.forEach(constraint => {
+                    const dayName = dayNames[parseInt(constraint.day)] || constraint.day;
+                    const periodName = `Period ${constraint.period}`;
+                    
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #e8eef5';
+                    row.innerHTML = `
+                        <td style="padding: 10px; color: #1e3a5f;"><strong>${constraint.subject}</strong></td>
+                        <td style="padding: 10px; color: #1e3a5f;">${dayName}</td>
+                        <td style="padding: 10px; color: #1e3a5f;">${periodName}</td>
+                        <td style="padding: 10px; text-align: center;">
+                            <button onclick="editConstraint(${constraint.id}, '${constraint.subject}', ${constraint.day}, ${constraint.period}, '${constraint.constraint_type}')" style="background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-right: 4px;">✏️ Edit</button>
+                            <button onclick="deleteConstraint(${constraint.id})" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">🗑️ Delete</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+                typeDisplay.style.display = 'block';
+            } else {
+                typeDisplay.style.display = 'none';
+            }
+        }
+
+        // Close constraint form
+        function closeConstraintForm() {
+            document.getElementById('constraintFormContainer').style.display = 'none';
+            document.getElementById('formSubject').value = '';
+            document.getElementById('formDay').value = '';
+            document.getElementById('formPeriod').value = '';
+            document.getElementById('constraintFormStatus').textContent = '';
+            document.getElementById('submitConstraintBtn').dataset.constraintId = '';
+        }
+
+        // Submit constraint (add or edit)
+        document.getElementById('submitConstraintBtn').addEventListener('click', async function() {
+            const dept = document.getElementById('department').value;
+            const subject = document.getElementById('formSubject').value;
+            const day = document.getElementById('formDay').value;
+            const period = document.getElementById('formPeriod').value;
+            const constraintType = this.dataset.constraintType;
+            const constraintId = this.dataset.constraintId;
+            const collegeId = sessionStorage.getItem('college_id');
+            const statusDiv = document.getElementById('constraintFormStatus');
+            
+            if (!subject || !day || !period) {
                 statusDiv.style.color = '#e74c3c';
-                statusDiv.textContent = 'Please fill all fields';
+                statusDiv.textContent = '❌ Please fill all fields';
                 return;
             }
             
             try {
-                const response = await fetch('/add-constraint', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        college_id: collegeId,
-                        dept_name: deptName,
-                        section: section,
-                        subject: subject,
-                        day: parseInt(day),
-                        period: parseInt(period),
-                        constraint_type: constraintType
-                    })
-                });
+                let response;
+                if (constraintId) {
+                    // Edit existing constraint
+                    response = await fetch(`/update-constraint/${constraintId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            subject: subject,
+                            day: parseInt(day),
+                            period: parseInt(period),
+                            constraint_type: constraintType
+                        })
+                    });
+                } else {
+                    // Add new constraint
+                    response = await fetch('/add-constraint', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            college_id: collegeId,
+                            dept_name: dept,
+                            subject: subject,
+                            day: parseInt(day),
+                            period: parseInt(period),
+                            constraint_type: constraintType
+                        })
+                    });
+                }
                 
                 const data = await response.json();
                 
                 if (response.ok && data.ok) {
                     statusDiv.style.color = '#2ecc71';
-                    statusDiv.textContent = `✓ ${constraintType === 'strict' ? 'Fixed placement' : 'Forbidden placement'} added successfully!`;
+                    statusDiv.textContent = `✓ ${constraintId ? 'Constraint updated' : 'Constraint added'} successfully!`;
                     
-                    // Reset form
-                    document.getElementById('constraintType').value = '';
-                    document.getElementById('constraintSubject').value = '';
-                    document.getElementById('constraintDay').value = '';
-                    document.getElementById('constraintPeriod').value = '';
-                    
-                    // Reload constraints
-                    setTimeout(() => {
-                        loadConstraintsForSection();
-                        statusDiv.textContent = '';
-                    }, 1500);
+                    setTimeout(async () => {
+                        await loadConstraintsForDept(dept, collegeId);
+                        // Refresh the display with the current constraint type
+                        const currentType = document.getElementById('submitConstraintBtn').dataset.constraintType;
+                        displayConstraintsOfType(currentType);
+                        // Reset form
+                        document.getElementById('formSubject').value = '';
+                        document.getElementById('formDay').value = '';
+                        document.getElementById('formPeriod').value = '';
+                        document.getElementById('constraintFormStatus').textContent = '';
+                    }, 1000);
                 } else {
                     statusDiv.style.color = '#e74c3c';
-                    statusDiv.textContent = `Error: ${data.error || 'Failed to add constraint'}`;
+                    statusDiv.textContent = `❌ ${data.error || 'Failed to save constraint'}`;
                 }
             } catch (error) {
-                console.error('Error adding constraint:', error);
+                console.error('Error saving constraint:', error);
                 statusDiv.style.color = '#e74c3c';
-                statusDiv.textContent = 'Error adding constraint';
+                statusDiv.textContent = '❌ Error saving constraint';
             }
+        });
+
+        // Edit constraint - populate form and show modal
+        function editConstraint(constraintId, subject, day, period, constraintType) {
+            document.getElementById('formSubject').value = subject;
+            document.getElementById('formDay').value = day;
+            document.getElementById('formPeriod').value = period;
+            document.getElementById('constraintFormTitle').textContent = `✏️ Edit ${constraintType === 'strict' ? 'Strict' : 'Forbidden'} Constraint`;
+            document.getElementById('constraintFormContainer').style.display = 'block';
+            document.getElementById('submitConstraintBtn').dataset.constraintType = constraintType;
+            document.getElementById('submitConstraintBtn').dataset.constraintId = constraintId;
+            document.getElementById('constraintFormStatus').textContent = '';
         }
 
+        // Delete constraint
         async function deleteConstraint(constraintId) {
             if (!confirm('Delete this constraint?')) return;
             
@@ -693,8 +722,14 @@
                 
                 const data = await response.json();
                 if (response.ok && data.ok) {
-                    // Reload constraints
-                    loadConstraintsForSection();
+                    const dept = document.getElementById('department').value;
+                    const collegeId = sessionStorage.getItem('college_id');
+                    await loadConstraintsForDept(dept, collegeId);
+                    // Refresh the display with the current constraint type
+                    const currentType = document.getElementById('submitConstraintBtn').dataset.constraintType;
+                    if (currentType) {
+                        displayConstraintsOfType(currentType);
+                    }
                 } else {
                     alert('Failed to delete constraint');
                 }
@@ -703,9 +738,6 @@
                 alert('Error deleting constraint');
             }
         }
-
-        // Initialize constraint form buttons
-        document.getElementById('addConstraintBtn').addEventListener('click', addConstraint);
 
         document.addEventListener('DOMContentLoaded', loadDepartments);
     </script>

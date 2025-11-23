@@ -98,7 +98,7 @@ class SubjectConstraint(db.Model):
     section = db.Column(db.String(10), nullable=False)
     subject = db.Column(db.String(100), nullable=False)
     day = db.Column(db.String(10), nullable=False)
-    period = db.Column(db.Integer, nullable=False)
+    period = db.Column(db.String(10), nullable=False)
     constraint_type = db.Column(db.String(20), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
 
