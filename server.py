@@ -1,12 +1,10 @@
 #server.py
 import os
 import logging
-from flask import Flask, jsonify, request, send_from_directory, session
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, jsonify, request, send_from_directory, session, render_template
 try:
     from flask_cors import CORS
 except ImportError:
-    # Provide a clear error so the developer knows to activate the venv or install the package
     logging.error(
         "Missing dependency: flask-cors.\n"
         "Make sure the project's virtual environment is activated and install the package:\n"
@@ -15,11 +13,20 @@ except ImportError:
         "  source /c/Users/91988/Hack_io/.venv/Scripts/activate && pip install flask-cors"
     )
     raise
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import timedelta
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
+# Import database and models
+try:
+    from app.models.database import (
+        db, Department, Admin, SectionTimetable, 
+        Subject, SubjectConstraint, Faculty, FacultyTimetable
+    )
+except ImportError:
+    logging.error("Failed to import from app.models. Make sure app folder structure is set up correctly.")
+    raise
 
 # Import timetable generation function and faculty mapping from algorithm
 try:
@@ -49,7 +56,7 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL not set in .env")
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
 CORS(app, supports_credentials=True)
 
 # Configure SQLAlchemy and Session
@@ -58,220 +65,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session timeout
 
-db = SQLAlchemy(app)
+# Initialize database with the configured app
+db.init_app(app)
 
-# Models
-class Department(db.Model):
-    __tablename__ = 'departments'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    sections = db.Column(JSONB, nullable=False)  # Store sections as JSON array
-    college_id = db.Column(db.String(50), db.ForeignKey('admin.college_id'), nullable=False)
-    
-    # Add unique constraint for name within the same college AND make it a proper composite key
-    __table_args__ = (
-        db.UniqueConstraint('name', 'college_id', name='unique_department_per_college'),
-        db.Index('idx_dept_name_college', 'name', 'college_id', unique=True)
-    )
-
-class Admin(db.Model):
-    __tablename__ = 'admin'
-    college_id = db.Column(db.String(50), primary_key=True)
-    admin_name = db.Column(db.String(100), nullable=False)
-    college_name = db.Column(db.String(200), nullable=False)
-    admin_password = db.Column(db.String(100), nullable=False)
-
-class SectionTimetable(db.Model):
-    __tablename__ = 'section_timetables'
-    id = db.Column(db.Integer, primary_key=True)
-    section_name = db.Column(db.String(10), nullable=False)
-    dept_name = db.Column(db.String(100), nullable=False)
-    college_id = db.Column(db.String(50), nullable=False)
-    timetable = db.Column(JSONB, nullable=False)
-    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
-    
-    __table_args__ = (
-        db.ForeignKeyConstraint(
-            ['dept_name', 'college_id'],
-            ['departments.name', 'departments.college_id'],
-            name='fk_timetable_department',
-            onupdate='CASCADE',
-            ondelete='CASCADE'
-        ),
-        # Add unique constraint for section within a department
-        db.UniqueConstraint('section_name', 'dept_name', 'college_id', name='unique_section_dept'),
-        # Add index for faster lookups
-        db.Index('idx_timetable_lookup', 'dept_name', 'college_id', 'created_at')
-    )
-
-class Subject(db.Model):
-    __tablename__ = 'subjects'
-    id = db.Column(db.Integer, primary_key=True)
-    subject_name = db.Column(db.String(100), nullable=False)
-    subject_code = db.Column(db.String(20), nullable=False)
-    dept_name = db.Column(db.String(100), nullable=False)
-    college_id = db.Column(db.String(50), nullable=False)
-    faculty_name = db.Column(db.String(100), nullable=False)  # Faculty assigned to this subject
-    section = db.Column(db.String(10), nullable=False)
-    hours = db.Column(db.Integer, nullable=False)
-    lab = db.Column(db.Boolean, nullable=False, default=False)
-    last = db.Column(db.Boolean, nullable=False, default=False)
-
-    __table_args__ = (
-        db.UniqueConstraint('subject_code', 'college_id', name='unique_subject_per_college'),
-        db.ForeignKeyConstraint(
-            ['dept_name', 'college_id'],
-            ['departments.name', 'departments.college_id'],
-            name='fk_subject_department',
-            onupdate='CASCADE',
-            ondelete='RESTRICT'
-        ),
-        db.ForeignKeyConstraint(
-            ['college_id'],
-            ['admin.college_id'],
-            name='fk_subject_college',
-            onupdate='CASCADE',
-            ondelete='RESTRICT'
-        )
-    )
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'subject_name': self.subject_name,
-            'subject_code': self.subject_code,
-            'dept_name': self.dept_name,
-            'college_id': self.college_id,
-            'faculty_name': self.faculty_name,
-            'section': self.section,
-            'hours': self.hours,
-            'lab': bool(self.lab),
-            'last': bool(self.last)
-        }
-
-
-class SubjectConstraint(db.Model):
-    """Stores both strict (fixed) and forbidden placement constraints for subjects."""
-    __tablename__ = 'subject_constraints'
-    id = db.Column(db.Integer, primary_key=True)
-    college_id = db.Column(db.String(50), nullable=False)
-    dept_name = db.Column(db.String(100), nullable=False)
-    section = db.Column(db.String(10), nullable=False)
-    subject = db.Column(db.String(100), nullable=False)
-    day = db.Column(db.String(10), nullable=False)
-    period = db.Column(db.Integer, nullable=False)
-    constraint_type = db.Column(db.String(20), nullable=False)  # 'strict' | 'forbidden'
-    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
-
-    __table_args__ = (
-        db.UniqueConstraint('dept_name', 'section', 'subject', 'day', 'period', 'constraint_type', 'college_id', name='unique_subject_constraint'),
-        db.Index('idx_constraint_lookup', 'dept_name', 'section', 'constraint_type'),
-        db.ForeignKeyConstraint(
-            ['dept_name', 'college_id'],
-            ['departments.name', 'departments.college_id'],
-            name='fk_constraint_department',
-            onupdate='CASCADE',
-            ondelete='CASCADE'
-        )
-    )
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'college_id': self.college_id,
-            'dept_name': self.dept_name,
-            'section': self.section,
-            'subject': self.subject,
-            'day': self.day,
-            'period': self.period,
-            'constraint_type': self.constraint_type,
-            'created_at': self.created_at.isoformat() if self.created_at is not None else None
-        }
-
-class Faculty(db.Model):
-    __tablename__ = 'faculty'
-    faculty_id = db.Column(db.String(50), primary_key=True)
-    faculty_name = db.Column(db.String(100), nullable=False)
-    designation = db.Column(db.String(100), nullable=False)
-    dept_name = db.Column(db.String(100), nullable=False)
-    faculty_password = db.Column(db.String(100), nullable=False)
-    college_id = db.Column(db.String(50), nullable=False)
-
-    __table_args__ = (
-        db.UniqueConstraint('faculty_id', 'college_id', name='unique_faculty_per_college'),
-        db.ForeignKeyConstraint(
-            ['dept_name', 'college_id'],
-            ['departments.name', 'departments.college_id'],
-            name='fk_faculty_department',
-            onupdate='CASCADE',
-            ondelete='RESTRICT'
-        ),
-        db.ForeignKeyConstraint(
-            ['college_id'],
-            ['admin.college_id'],
-            name='fk_faculty_college',
-            onupdate='CASCADE',
-            ondelete='RESTRICT'
-        )
-    )
-
-    def to_dict(self):
-        """Convert faculty object to dictionary for JSON responses"""
-        return {
-            'faculty_id': self.faculty_id,
-            'faculty_name': self.faculty_name,
-            'designation': self.designation,
-            'dept_name': self.dept_name,
-            'college_id': self.college_id
-        }
-
-class FacultyTimetable(db.Model):
-    """Stores generated personal faculty timetables"""
-    __tablename__ = 'faculty_timetables'
-    id = db.Column(db.Integer, primary_key=True)
-    college_id = db.Column(db.String(50), nullable=False)
-    dept_name = db.Column(db.String(100), nullable=False)
-    section = db.Column(db.String(10), nullable=False)
-    faculty_id = db.Column(db.String(50), nullable=False)
-    faculty_name = db.Column(db.String(100), nullable=False)
-    # Store timetable as JSON: {day: {period: subject, ...}, ...}
-    timetable = db.Column(db.JSON, nullable=False)
-    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
-    updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
-
-    __table_args__ = (
-        db.UniqueConstraint('college_id', 'dept_name', 'section', 'faculty_id', name='unique_faculty_timetable'),
-        db.Index('idx_faculty_timetable_lookup', 'college_id', 'dept_name', 'faculty_id'),
-        db.ForeignKeyConstraint(
-            ['college_id'],
-            ['admin.college_id'],
-            name='fk_faculty_timetable_college',
-            onupdate='CASCADE',
-            ondelete='CASCADE'
-        ),
-        db.ForeignKeyConstraint(
-            ['faculty_id', 'college_id'],
-            ['faculty.faculty_id', 'faculty.college_id'],
-            name='fk_faculty_timetable_faculty',
-            onupdate='CASCADE',
-            ondelete='CASCADE'
-        )
-    )
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'college_id': self.college_id,
-            'dept_name': self.dept_name,
-            'section': self.section,
-            'faculty_id': self.faculty_id,
-            'faculty_name': self.faculty_name,
-            'timetable': self.timetable,
-            'created_at': self.created_at.isoformat() if self.created_at is not None else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at is not None else None
-        }
-
-# Create all database tables
+# Create tables
 with app.app_context():
     db.create_all()
 
@@ -1040,10 +837,59 @@ def get_faculty_timetable():
 def serve_index():
     # Make index.html the default page
     try:
-        return send_from_directory('.', 'index.html')
+        return render_template('index.html')
     except Exception as e:
-        logging.error(f"index.html not found")
+        logging.error(f"index.html not found: {e}")
         return jsonify({'error': 'Default page not found'}), 404
+
+# Template routes
+@app.route('/admin-login')
+def admin_login():
+    return render_template('admin_login.html')
+
+@app.route('/admin-register')
+def admin_register():
+    return render_template('admin_register.html')
+
+@app.route('/admin-dashboard')
+def admin_dashboard():
+    return render_template('admin_dashboard.html')
+
+@app.route('/faculty-login')
+def faculty_login():
+    return render_template('faculty_login.html')
+
+@app.route('/faculty-dashboard')
+def faculty_dashboard():
+    return render_template('faculty_dashboard.html')
+
+@app.route('/authority-login')
+def authority_login():
+    return render_template('authority_login.html')
+
+@app.route('/authority-dashboard')
+def authority_dashboard():
+    return render_template('authority_dashboard.html')
+
+@app.route('/add-departments')
+def add_departments():
+    return render_template('add_departments.html')
+
+@app.route('/add-faculty-form')
+def add_faculty_form():
+    return render_template('add_faculty.html')
+
+@app.route('/add-subjects')
+def add_subjects():
+    return render_template('add_subjects.html')
+
+@app.route('/view-timetables')
+def view_timetables():
+    return render_template('view_timetables.html')
+
+@app.route('/set-constraints')
+def set_constraints():
+    return render_template('set_constraints.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename):
