@@ -46,6 +46,16 @@
         tr:nth-child(even) { background: #f9fafb; }
         
         @media (max-width: 768px) { .container { margin-top: 70px; padding: 20px 12px; } .card { padding: 20px; } }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background-color: white; margin: 5% auto; padding: 32px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-btn { float: right; font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+        .close-btn:hover { color: #000; }
+        .modal h3 { color: #1e3a5f; margin-bottom: 20px; }
+
     </style>
 </head>
 <body>
@@ -69,11 +79,6 @@
                 <div class="form-group">
                     <label for="faculty_name">Faculty Name</label>
                     <input type="text" id="faculty_name" placeholder="Full name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="faculty_email">Email</label>
-                    <input type="email" id="faculty_email" placeholder="email@example.com" required>
                 </div>
 
                 <div class="form-group">
@@ -115,6 +120,48 @@
         </div>
     </div>
 
+    <!-- Edit Faculty Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h3>Edit Faculty</h3>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="edit_faculty_id">Faculty ID</label>
+                    <input type="text" id="edit_faculty_id" disabled style="background: #f0f0f0;">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_faculty_name">Faculty Name</label>
+                    <input type="text" id="edit_faculty_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_department">Department</label>
+                    <select id="edit_department" required>
+                        <option value="" disabled selected>Select department...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_designation">Designation</label>
+                    <select id="edit_designation" required>
+                        <option value="PROFESSOR">Professor</option>
+                        <option value="HOD">HOD</option>
+                        <option value="DEAN">Dean</option>
+                        <option value="PRINCIPAL">Principal</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_faculty_password">Password (leave empty to keep current)</label>
+                    <input type="password" id="edit_faculty_password">
+                </div>
+
+                <button type="submit" class="btn" style="margin-top: 20px;">Update Faculty</button>
+            </form>
+        </div>
+    </div>
     <script>
         async function loadDepartments() {
             try {
@@ -122,13 +169,15 @@
                 const response = await fetch(`/get-departments?college_id=${collegeId}`, { credentials: 'include' });
                 const data = await response.json();
                 
-                const select = document.getElementById('department');
-                select.innerHTML = '<option value="" disabled selected>Select department...</option>';
-                data.departments.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.name;
-                    option.textContent = dept.name;
-                    select.appendChild(option);
+                const selects = [document.getElementById('department'), document.getElementById('edit_department')];
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="" disabled selected>Select department...</option>';
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.name;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
                 });
             } catch (error) {
                 console.error('Error loading departments:', error);
@@ -141,7 +190,6 @@
             const formData = {
                 faculty_id: document.getElementById('faculty_id').value,
                 faculty_name: document.getElementById('faculty_name').value,
-                faculty_email: document.getElementById('faculty_email').value,
                 department: document.getElementById('department').value,
                 designation: document.getElementById('designation').value,
                 faculty_password: document.getElementById('faculty_password').value,
@@ -225,35 +273,42 @@
                 .then(r => r.json())
                 .then(data => {
                     const faculty = data.faculty;
-                    document.getElementById('faculty_id').value = faculty.faculty_id;
-                    document.getElementById('faculty_name').value = faculty.faculty_name;
-                    document.getElementById('faculty_email').value = faculty.faculty_email || '';
-                    document.getElementById('department').value = faculty.dept_name;
-                    document.getElementById('designation').value = faculty.designation;
-                    document.getElementById('faculty_password').value = '';
+                    document.getElementById('edit_faculty_id').value = faculty.faculty_id;
+                    document.getElementById('edit_faculty_name').value = faculty.faculty_name;
+                    document.getElementById('edit_department').value = faculty.dept_name;
+                    document.getElementById('edit_designation').value = faculty.designation;
+                    document.getElementById('edit_faculty_password').value = '';
                     
-                    const btn = document.querySelector('.btn');
-                    btn.textContent = 'Update Faculty';
-                    btn.removeEventListener('click', null);
-                    btn.addEventListener('click', (e) => {
+                    document.getElementById('editModal').style.display = 'block';
+                    
+                    // Store ID for update
+                    document.getElementById('editForm').onsubmit = (e) => {
                         e.preventDefault();
                         updateFaculty(facultyId);
-                    });
-                    
-                    document.getElementById('facultyForm').scrollIntoView({ behavior: 'smooth' });
+                    };
                 })
                 .catch(console.error);
         }
 
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
         function updateFaculty(facultyId) {
             const formData = {
-                faculty_name: document.getElementById('faculty_name').value,
-                faculty_email: document.getElementById('faculty_email').value,
-                department: document.getElementById('department').value,
-                designation: document.getElementById('designation').value
+                faculty_name: document.getElementById('edit_faculty_name').value,
+                department: document.getElementById('edit_department').value,
+                designation: document.getElementById('edit_designation').value
             };
 
-            const password = document.getElementById('faculty_password').value;
+            const password = document.getElementById('edit_faculty_password').value;
             if (password) {
                 formData.faculty_password = password;
             }
@@ -268,8 +323,7 @@
                 .then(d => {
                     if (d.ok) {
                         showMessage('Faculty updated successfully!', 'success');
-                        document.getElementById('facultyForm').reset();
-                        document.querySelector('.btn').textContent = 'Add Faculty';
+                        closeEditModal();
                         loadFaculty();
                     } else {
                         showMessage(d.error || 'Failed to update faculty', 'error');

@@ -7,6 +7,8 @@ import copy
 sections = ["A", "B", "C"]  # Default fallback
 subjects_per_section = {}   # Will be set dynamically
 faculties = {}              # Will be set dynamically
+strict_subject_placement = {}  # Will be set dynamically
+forbidden_subject_placement = {}  # Will be set dynamically
 
 days = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 num_days = 5
@@ -55,38 +57,33 @@ def get_faculty_for_subject(section: str, subject: str) -> Optional[str]:
 
 
 # ==================== STRICT / FORBIDDEN ====================
-strict_subject_placement = {
-    "A": {
-        "MATHS": [("Mon", 1), ("Wed", 2)],
-        "DDCO":[("Tue",2),("Thu",2),("Fri",2)]
-    },
-    "B": {
-        "TOC": [("Tue", 1)],
-        "RMI":[("Mon",1)]
-    },
-    "C": {
-        "CNS": [("Thu", 3)]
-    }
-}
+# These will be populated dynamically from frontend/database
+# Format: {section: {subject: [(day_number, period_number), ...], ...}, ...}
+# Example:
+# strict_subject_placement = {
+#     "A": {
+#         "MATHS": [(1, 1), (3, 2)],  # Monday period 1, Wednesday period 2
+#         "DDCO": [(2, 2), (4, 2), (5, 2)]
+#     }
+# }
+# forbidden_subject_placement = {
+#     "A": {
+#         "TG": [(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)],  # Cannot be on period 1 any day
+#         "REMEDIAL": [(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)]
+#     }
+# }
 
-forbidden_subject_placement = {
-    "A": {
-         "TG": [("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)],
-         "REMEDIAL":[("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)]
-    },
-    "B": {
-         "TG": [("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)],
-         "REMEDIAL":[("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)]
-    },
-    "C": {
-         "TG": [("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)],
-         "REMEDIAL":[("Mon", 1),("Tue", 1),("Wed", 1),("Thu", 1),("Fri", 1)]
-    }
-}
-
-def convert_day_to_index(day_name: str) -> int:
+def convert_day_to_index(day_input) -> int:
+    """Convert day input to index (1-5).
+    Can handle:
+    - Integer (1-5): returned as-is
+    - String day names: "Mon", "Tue", etc. (converted for backward compatibility)
+    """
+    if isinstance(day_input, int):
+        return day_input if 1 <= day_input <= 5 else -1
+    
     day_map = {"Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4, "Fri": 5}
-    return day_map.get(day_name, -1)
+    return day_map.get(day_input, -1)
 
 def convert_placements(placement_dict, section):
     converted = {}
@@ -94,8 +91,8 @@ def convert_placements(placement_dict, section):
         return converted
     for subject, placements in placement_dict[section].items():
         converted_list = []
-        for day_name, period in placements:
-            day_idx = convert_day_to_index(day_name)
+        for day_input, period in placements:
+            day_idx = convert_day_to_index(day_input)
             if day_idx == -1 or not (1 <= period <= num_periods):
                 continue
             converted_list.append((day_idx, period))
@@ -1013,18 +1010,20 @@ def section_timetable(section: str, all_timetables: Dict[str, Dict[int, Dict[int
     # return best effort if no success
     return best_tt, best_counters, False
 
-def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict=None):
+def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict=None, strict_constraints=None, forbidden_constraints=None):
     """Generate and return timetables for all sections.
     
     Args:
         section_list: List of section names (e.g., ["A", "B", "C"])
         subjects_dict: Dictionary with structure {section: {subject_name: {hours, lab, last}, ...}, ...}
         faculty_dict: Dictionary mapping subject_name to faculty_name
+        strict_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for fixed placements
+        forbidden_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for forbidden placements
     
     Returns a dictionary mapping section names to their timetables.
     Each timetable is a dictionary mapping day numbers (1-5) to dictionaries mapping period numbers (1-7) to subject names."""
     
-    global sections, subjects_per_section, faculties, assigned_multi_faculty
+    global sections, subjects_per_section, faculties, assigned_multi_faculty, strict_subject_placement, forbidden_subject_placement
     
     # Set the global variables from parameters
     if section_list is not None:
@@ -1033,6 +1032,10 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         subjects_per_section = subjects_dict
     if faculty_dict is not None:
         faculties = faculty_dict
+    if strict_constraints is not None:
+        strict_subject_placement = strict_constraints
+    if forbidden_constraints is not None:
+        forbidden_subject_placement = forbidden_constraints
     
     # Reset assigned faculties for this generation
     assigned_multi_faculty = {}

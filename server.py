@@ -209,6 +209,45 @@ def build_timetable_data_from_db(dept_name: str, college_id: str):
         logging.exception("Error building timetable data from database")
         return None, None, None
 
+def build_constraints_from_db(dept_name: str, college_id: str):
+    """
+    Fetch constraints from database and build the constraint dictionaries
+    in the format expected by the algorithm.
+    
+    Returns:
+        tuple: (strict_constraints, forbidden_constraints) dictionaries
+        Format: {section: {subject: [(day_num, period_num), ...], ...}, ...}
+    """
+    try:
+        constraints = SubjectConstraint.query.filter_by(
+            dept_name=dept_name, college_id=college_id
+        ).all()
+        
+        strict_constraints = {}
+        forbidden_constraints = {}
+        
+        for constraint in constraints:
+            # Select target dict based on constraint type
+            target_dict = strict_constraints if constraint.constraint_type == 'strict' else forbidden_constraints
+            
+            # Initialize section if needed
+            if constraint.section not in target_dict:
+                target_dict[constraint.section] = {}
+            
+            # Initialize subject if needed
+            if constraint.subject not in target_dict[constraint.section]:
+                target_dict[constraint.section][constraint.subject] = []
+            
+            # Add the (day, period) tuple
+            target_dict[constraint.section][constraint.subject].append((constraint.day, constraint.period))
+        
+        logging.info(f"Built constraints for {dept_name}: {len(constraints)} total constraints")
+        return strict_constraints, forbidden_constraints
+        
+    except Exception as e:
+        logging.exception("Error building constraints from database")
+        return {}, {}
+
 @app.route('/generate-timetable', methods=['POST'])
 def generate_timetable():
     try:
@@ -230,6 +269,10 @@ def generate_timetable():
             
             logging.info(f"Successfully fetched data. Sections: {sections}, Subjects: {len(subjects_per_section)}")
             
+            # Fetch and build constraints from database
+            strict_constraints, forbidden_constraints = build_constraints_from_db(dept_name, college_id)
+            logging.info(f"Loaded constraints - Strict: {len(str(strict_constraints))}, Forbidden: {len(str(forbidden_constraints))}")
+            
             # Suppress algorithm debug output by redirecting stderr
             import sys
             import io
@@ -239,11 +282,13 @@ def generate_timetable():
             sys.stderr = io.StringIO()
             
             try:
-                # Generate timetables using the algorithm with dynamic data
+                # Generate timetables using the algorithm with dynamic data and constraints
                 section_timetables = store_section_timetables(
                     section_list=sections,
                     subjects_dict=subjects_per_section,
-                    faculty_dict=faculties
+                    faculty_dict=faculties,
+                    strict_constraints=strict_constraints,
+                    forbidden_constraints=forbidden_constraints
                 )
             finally:
                 # Restore stdout/stderr
@@ -1269,6 +1314,29 @@ def get_departments():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/get-sections', methods=['GET'])
+def get_sections():
+    try:
+        dept_name = request.args.get('dept_name')
+        college_id = request.args.get('college_id')
+        
+        if not dept_name:
+            return jsonify({'error': 'Department name is required'}), 400
+        
+        # If college_id is provided, use it for lookup; otherwise try without it
+        if college_id:
+            department = Department.query.filter_by(name=dept_name, college_id=college_id).first()
+        else:
+            department = Department.query.filter_by(name=dept_name).first()
+        
+        if not department:
+            return jsonify({'sections': []}), 200
+        
+        sections = department.sections if department.sections else []
+        return jsonify({'sections': sections}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/department/<int:dept_id>', methods=['PUT'])
 def update_department(dept_id):
     try:
@@ -1679,6 +1747,121 @@ def save_constraints():
         logging.exception("Failed to save constraints")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/add-constraint', methods=['POST'])
+def add_constraint():
+    """Add a single constraint (strict or forbidden) for a subject"""
+    try:
+        data = request.get_json()
+        college_id = data.get('college_id')
+        dept_name = data.get('dept_name')
+        section = data.get('section')
+        subject = data.get('subject')
+        day = data.get('day')  # 1-5 for Mon-Fri
+        period = data.get('period')  # 1-7
+        constraint_type = data.get('constraint_type')  # 'strict' or 'forbidden'
+        
+        if not all([college_id, dept_name, section, subject, day, period, constraint_type]):
+            return jsonify({'ok': False, 'error': 'All fields are required'}), 400
+        
+        if constraint_type not in ['strict', 'forbidden']:
+            return jsonify({'ok': False, 'error': 'constraint_type must be strict or forbidden'}), 400
+        
+        # Validate department exists
+        dept = Department.query.filter_by(name=dept_name, college_id=college_id).first()
+        if not dept:
+            return jsonify({'ok': False, 'error': 'Department not found'}), 404
+        
+        # Check if constraint already exists
+        existing = SubjectConstraint.query.filter_by(
+            college_id=college_id, dept_name=dept_name, section=section,
+            subject=subject, day=day, period=period, constraint_type=constraint_type
+        ).first()
+        
+        if existing:
+            return jsonify({'ok': False, 'error': 'Constraint already exists'}), 409
+        
+        # Create and save constraint
+        new_constraint = SubjectConstraint(
+            college_id=college_id,
+            dept_name=dept_name,
+            section=section,
+            subject=subject,
+            day=day,
+            period=int(period),
+            constraint_type=constraint_type
+        )
+        
+        db.session.add(new_constraint)
+        db.session.commit()
+        
+        return jsonify({'ok': True, 'constraint_id': new_constraint.id}), 201
+    
+    except Exception as e:
+        logging.exception("Failed to add constraint")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/delete-constraint/<int:constraint_id>', methods=['DELETE'])
+def delete_constraint(constraint_id):
+    """Delete a specific constraint by ID"""
+    try:
+        constraint = SubjectConstraint.query.get(constraint_id)
+        if not constraint:
+            return jsonify({'ok': False, 'error': 'Constraint not found'}), 404
+        
+        db.session.delete(constraint)
+        db.session.commit()
+        
+        return jsonify({'ok': True}), 200
+    
+    except Exception as e:
+        logging.exception("Failed to delete constraint")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+@app.route('/get-constraints-for-dept', methods=['GET'])
+def get_constraints_for_dept():
+    """Get all constraints for a department, optionally filtered by section"""
+    try:
+        college_id = request.args.get('college_id')
+        dept_name = request.args.get('dept_name')
+        section = request.args.get('section')
+        
+        if not college_id or not dept_name:
+            return jsonify({'ok': False, 'error': 'college_id and dept_name are required'}), 400
+        
+        query = SubjectConstraint.query.filter_by(college_id=college_id, dept_name=dept_name)
+        
+        if section:
+            query = query.filter_by(section=section)
+        
+        constraints = query.all()
+        
+        # Organize by constraint type
+        strict_constraints = []
+        forbidden_constraints = []
+        
+        for c in constraints:
+            constraint_data = {
+                'id': c.id,
+                'section': c.section,
+                'subject': c.subject,
+                'day': c.day,
+                'period': c.period
+            }
+            if c.constraint_type == 'strict':
+                strict_constraints.append(constraint_data)
+            else:
+                forbidden_constraints.append(constraint_data)
+        
+        return jsonify({
+            'ok': True,
+            'strict': strict_constraints,
+            'forbidden': forbidden_constraints
+        }), 200
+    
+    except Exception as e:
+        logging.exception("Failed to get constraints")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # Error handler for 404 Not Found
 @app.errorhandler(404)
 def not_found(e):
@@ -1689,5 +1872,10 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     
-    # Run the app on localhost:5000
-    app.run(host='localhost', port=5000, debug=True)
+    # Get host and port from environment variables
+    host = os.getenv('HOST', '0.0.0.0')  # Default to 0.0.0.0 to accept external connections
+    port = int(os.getenv('PORT', 5000))  # Default to 5000
+    debug_mode = os.getenv('DEBUG', 'True').lower() == 'true'
+    
+    # Run the app
+    app.run(host=host, port=port, debug=debug_mode)

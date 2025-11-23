@@ -49,6 +49,16 @@
         tr:nth-child(even) { background: #f9fafb; }
         
         @media (max-width: 768px) { .container { margin-top: 70px; padding: 20px 12px; } .card { padding: 20px; } }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background-color: white; margin: 5% auto; padding: 32px; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-btn { float: right; font-size: 28px; font-weight: bold; color: #aaa; cursor: pointer; }
+        .close-btn:hover { color: #000; }
+        .modal h3 { color: #1e3a5f; margin-bottom: 20px; }
+
     </style>
 </head>
 <body>
@@ -90,7 +100,9 @@
 
                 <div class="form-group">
                     <label for="faculty">Faculty Name</label>
-                    <input type="text" id="faculty" placeholder="Faculty name" required>
+                    <select id="faculty" required>
+                        <option value="" disabled selected>Select department first...</option>
+                    </select>
                 </div>
 
                 <div class="checkbox-group">
@@ -128,42 +140,216 @@
         </div>
     </div>
 
+    <!-- Edit Subject Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h3>Edit Subject</h3>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="edit_subject_code">Subject Code</label>
+                    <input type="text" id="edit_subject_code" disabled style="background: #f0f0f0;">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_subject_name">Subject Name</label>
+                    <input type="text" id="edit_subject_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_department">Department</label>
+                    <select id="edit_department" required>
+                        <option value="" disabled selected>Select department...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_section">Section</label>
+                    <select id="edit_section" required>
+                        <option value="" disabled selected>Select section...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_faculty">Faculty Name</label>
+                    <select id="edit_faculty" required>
+                        <option value="" disabled selected>Select faculty...</option>
+                    </select>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="edit_is_lab">
+                    <label for="edit_is_lab" style="margin-bottom: 0;">Is Lab Subject</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="edit_is_last">
+                    <label for="edit_is_last" style="margin-bottom: 0;">Is Last Class</label>
+                </div>
+
+                <button type="submit" class="btn" style="margin-top: 20px;">Update Subject</button>
+            </form>
+        </div>
+    </div>
     <script>
+        let allFaculty = [];
+
         async function loadDepartments() {
             try {
                 const collegeId = sessionStorage.getItem('college_id');
                 const response = await fetch(`/get-departments?college_id=${collegeId}`, { credentials: 'include' });
                 const data = await response.json();
                 
-                const select = document.getElementById('department');
-                select.innerHTML = '<option value="" disabled selected>Select department...</option>';
-                data.departments.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.name;
-                    option.textContent = dept.name;
-                    select.appendChild(option);
+                const selects = [document.getElementById('department'), document.getElementById('edit_department')];
+                selects.forEach(select => {
+                    select.innerHTML = '<option value="" disabled selected>Select department...</option>';
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.name;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
                 });
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
-        document.getElementById('department').addEventListener('change', function() {
-            const deptName = this.value;
-            fetch(`/get-sections?dept_name=${deptName}`, { credentials: 'include' })
-                .then(r => r.json())
-                .then(data => {
-                    const select = document.getElementById('section');
-                    select.innerHTML = '<option value="" disabled selected>Select section...</option>';
-                    data.sections.forEach(sec => {
-                        const option = document.createElement('option');
-                        option.value = sec;
-                        option.textContent = sec;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(console.error);
-        });
+        function attachEventListeners() {
+            const deptSelect = document.getElementById('department');
+            const editDeptSelect = document.getElementById('edit_department');
+            
+            if (deptSelect) {
+                deptSelect.addEventListener('change', function() {
+                    const deptName = this.value;
+                    const collegeId = sessionStorage.getItem('college_id');
+                    console.log('Department selected:', deptName, 'College ID:', collegeId);
+                    
+                    // Load sections for selected department
+                    fetch(`/get-sections?dept_name=${encodeURIComponent(deptName)}&college_id=${encodeURIComponent(collegeId)}`, { credentials: 'include' })
+                        .then(r => r.json())
+                        .then(data => {
+                            const select = document.getElementById('section');
+                            if (select) {
+                                select.innerHTML = '<option value="" disabled selected>Select section...</option>';
+                                if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
+                                    data.sections.forEach(sec => {
+                                        const option = document.createElement('option');
+                                        option.value = sec;
+                                        option.textContent = sec;
+                                        select.appendChild(option);
+                                    });
+                                    console.log('Sections loaded for ' + deptName + ':', data.sections);
+                                } else {
+                                    console.warn('No sections found for department:', deptName);
+                                }
+                            }
+                        })
+                        .catch(e => console.error('Error loading sections:', e));
+
+                    // Load faculty for selected department
+                    const facultySelect = document.getElementById('faculty');
+                    if (facultySelect) {
+                        facultySelect.innerHTML = '<option value="" disabled selected>Select faculty...</option>';
+                        if (allFaculty && Array.isArray(allFaculty) && allFaculty.length > 0) {
+                            const deptFaculty = allFaculty.filter(f => f.dept_name === deptName);
+                            console.log('Filtered faculty for ' + deptName + ':', deptFaculty);
+                            if (deptFaculty.length > 0) {
+                                deptFaculty.forEach(fac => {
+                                    const option = document.createElement('option');
+                                    option.value = fac.faculty_name;
+                                    option.textContent = fac.faculty_name;
+                                    facultySelect.appendChild(option);
+                                });
+                            } else {
+                                console.warn('No faculty found for department:', deptName);
+                            }
+                        } else {
+                            console.warn('allFaculty is empty or not an array');
+                        }
+                    }
+                });
+            }
+            
+            if (editDeptSelect) {
+                editDeptSelect.addEventListener('change', function() {
+                    const deptName = this.value;
+                    const collegeId = sessionStorage.getItem('college_id');
+                    console.log('Edit department selected:', deptName);
+                    
+                    // Load sections for selected department
+                    fetch(`/get-sections?dept_name=${encodeURIComponent(deptName)}&college_id=${encodeURIComponent(collegeId)}`, { credentials: 'include' })
+                        .then(r => r.json())
+                        .then(data => {
+                            const select = document.getElementById('edit_section');
+                            if (select) {
+                                select.innerHTML = '<option value="" disabled selected>Select section...</option>';
+                                if (data.sections && Array.isArray(data.sections)) {
+                                    data.sections.forEach(sec => {
+                                        const option = document.createElement('option');
+                                        option.value = sec;
+                                        option.textContent = sec;
+                                        select.appendChild(option);
+                                    });
+                                    console.log('Sections loaded for edit modal for ' + deptName + ':', data.sections);
+                                }
+                            }
+                        })
+                        .catch(e => console.error('Error loading sections:', e));
+
+                    // Load faculty for selected department
+                    const facultySelect = document.getElementById('edit_faculty');
+                    if (facultySelect) {
+                        facultySelect.innerHTML = '<option value="" disabled selected>Select faculty...</option>';
+                        if (allFaculty && Array.isArray(allFaculty)) {
+                            const deptFaculty = allFaculty.filter(f => f.dept_name === deptName);
+                            if (deptFaculty.length > 0) {
+                                deptFaculty.forEach(fac => {
+                                    const option = document.createElement('option');
+                                    option.value = fac.faculty_name;
+                                    option.textContent = fac.faculty_name;
+                                    facultySelect.appendChild(option);
+                                });
+                                console.log('Faculty loaded for edit modal for ' + deptName + ':', deptFaculty);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function loadFacultyList() {
+            try {
+                const collegeId = sessionStorage.getItem('college_id');
+                const response = await fetch(`/get-faculty?college_id=${collegeId}`, { credentials: 'include' });
+                const data = await response.json();
+                
+                if (response.ok && data.faculty && Array.isArray(data.faculty)) {
+                    allFaculty = data.faculty;
+                    console.log('Faculty data loaded:', allFaculty);
+                    return true;
+                } else {
+                    console.warn('No faculty data received');
+                    allFaculty = [];
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error loading faculty:', error);
+                allFaculty = [];
+                return false;
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
 
         document.getElementById('subjectForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -260,34 +446,43 @@
                 .then(r => r.json())
                 .then(data => {
                     const subject = data.subject;
-                    document.getElementById('subject_code').value = subject.subject_code;
-                    document.getElementById('subject_name').value = subject.subject_name;
-                    document.getElementById('department').value = subject.dept_name;
-                    document.getElementById('faculty').value = subject.faculty_name;
-                    document.getElementById('is_lab').checked = subject.lab;
-                    document.getElementById('is_last').checked = subject.last;
+                    document.getElementById('edit_subject_code').value = subject.subject_code;
+                    document.getElementById('edit_subject_name').value = subject.subject_name;
+                    document.getElementById('edit_department').value = subject.dept_name;
+                    document.getElementById('edit_is_lab').checked = subject.lab;
+                    document.getElementById('edit_is_last').checked = subject.last;
                     
-                    const btn = document.querySelector('.btn');
-                    btn.textContent = 'Update Subject';
-                    btn.onclick = () => updateSubject(id);
-                    btn.removeEventListener('click', null);
-                    btn.addEventListener('click', (e) => {
+                    // Trigger change event on department dropdown to load sections and faculty
+                    const editDeptSelect = document.getElementById('edit_department');
+                    if (editDeptSelect) {
+                        // Create and dispatch change event
+                        const changeEvent = new Event('change', { bubbles: true });
+                        editDeptSelect.dispatchEvent(changeEvent);
+                        
+                        // Give it a moment to populate, then set the section and faculty values
+                        setTimeout(() => {
+                            document.getElementById('edit_section').value = subject.section;
+                            document.getElementById('edit_faculty').value = subject.faculty_name;
+                        }, 100);
+                    }
+                    
+                    document.getElementById('editModal').style.display = 'block';
+                    
+                    // Store ID for update
+                    document.getElementById('editForm').onsubmit = (e) => {
                         e.preventDefault();
                         updateSubject(id);
-                    });
-                    
-                    document.getElementById('section').value = subject.section;
-                    document.getElementById('subjectForm').scrollIntoView({ behavior: 'smooth' });
+                    };
                 })
                 .catch(console.error);
         }
 
         function updateSubject(id) {
             const formData = {
-                subject_name: document.getElementById('subject_name').value,
-                faculty_name: document.getElementById('faculty').value,
-                lab: document.getElementById('is_lab').checked,
-                last: document.getElementById('is_last').checked
+                subject_name: document.getElementById('edit_subject_name').value,
+                faculty_name: document.getElementById('edit_faculty').value,
+                lab: document.getElementById('edit_is_lab').checked,
+                last: document.getElementById('edit_is_last').checked
             };
 
             fetch(`/update-subject/${id}`, {
@@ -300,8 +495,7 @@
                 .then(d => {
                     if (d.ok) {
                         showMessage('Subject updated successfully!', 'success');
-                        document.getElementById('subjectForm').reset();
-                        document.querySelector('.btn').textContent = 'Add Subject';
+                        closeEditModal();
                         loadSubjects();
                     } else {
                         showMessage(d.error || 'Failed to update subject', 'error');
@@ -310,7 +504,17 @@
                 .catch(console.error);
         }
 
-        window.addEventListener('load', () => { loadDepartments(); loadSubjects(); });
+        window.addEventListener('load', async () => { 
+            console.log('Page load started');
+            await loadDepartments();
+            console.log('Departments loaded');
+            await loadFacultyList();
+            console.log('Faculty loaded, allFaculty:', allFaculty);
+            await loadSubjects();
+            console.log('Subjects loaded');
+            attachEventListeners();
+            console.log('Event listeners attached');
+        });
     </script>
 </body>
 </html>
