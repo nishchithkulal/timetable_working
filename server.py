@@ -801,6 +801,63 @@ def get_faculty_timetables():
         logging.exception("Failed to retrieve faculty timetables")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/get-faculty-timetables-db', methods=['GET'])
+def get_faculty_timetables_db():
+    """Get faculty timetables directly from faculty_timetables table"""
+    try:
+        dept_name = request.args.get('dept_name')
+        college_id = request.args.get('college_id')
+        
+        if not dept_name or not college_id:
+            return jsonify({'ok': False, 'error': 'Department name and college ID are required'}), 400
+        
+        # Query faculty timetables from the database table
+        faculty_timetables_db = FacultyTimetable.query.filter_by(
+            dept_name=dept_name,
+            college_id=college_id
+        ).all()
+        
+        if not faculty_timetables_db:
+            return jsonify({
+                'ok': True,
+                'faculty_timetables': {},
+                'message': 'No faculty timetables found in database'
+            }), 200
+        
+        logging.info(f"Found {len(faculty_timetables_db)} faculty timetables for {dept_name}")
+        
+        # Convert to the format expected by frontend
+        faculty_timetables = {}
+        for ft in faculty_timetables_db:
+            faculty_name = ft.faculty_name
+            # Get the stored timetable (already in 2D array format or dict format)
+            timetable_data = ft.timetable
+            
+            # If timetable is stored as dict, convert to 2D array format
+            if isinstance(timetable_data, dict):
+                # Dict format: {day: {period: subject}}
+                days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+                array_timetable = []
+                for day_idx, day in enumerate(days):
+                    day_data = []
+                    for period_idx in range(7):
+                        subject = timetable_data.get(day, {}).get(str(period_idx), None)
+                        day_data.append(subject)
+                    array_timetable.append(day_data)
+                faculty_timetables[faculty_name] = array_timetable
+            else:
+                # Already in array format
+                faculty_timetables[faculty_name] = timetable_data
+        
+        return jsonify({
+            'ok': True,
+            'faculty_timetables': faculty_timetables
+        }), 200
+        
+    except Exception as e:
+        logging.exception("Failed to retrieve faculty timetables from database")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/debug-faculty-timetables', methods=['GET'])
 def debug_faculty_timetables():
     """Debug endpoint to check subject-faculty mappings for a department"""

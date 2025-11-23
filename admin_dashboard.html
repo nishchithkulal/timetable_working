@@ -6,130 +6,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; display: flex; flex-direction: column; }
         
-        .sidebar {
-            position: fixed;
-            left: -250px;
-            top: 0;
-            width: 250px;
-            height: 100%;
-            background-color: #2980b9;
-            transition: left 0.3s ease;
-            z-index: 1001;
-            padding-top: 60px;
-            color: white;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        }
+        .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100%; background: linear-gradient(135deg, #1a5276 0%, #2980b9 100%); transition: left 0.3s ease; z-index: 1001; padding-top: 70px; color: white; box-shadow: 2px 0 8px rgba(0,0,0,0.2); overflow-y: auto; }
+        .sidebar.open { left: 0; }
+        .menu-items { padding: 16px 12px; }
+        .dropdown-btn { background: none; border: none; color: white; padding: 12px 14px; width: 100%; text-align: left; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-weight: 500; transition: all 0.3s ease; border-radius: 8px; margin-bottom: 4px; }
+        .dropdown-btn:hover { background-color: rgba(255,255,255,0.12); transform: translateX(4px); }
+        .dropdown-content { display: none; padding: 8px 0 8px 16px; background-color: rgba(255,255,255,0.08); margin-top: 6px; border-radius: 8px; }
+        .dropdown-content.show { display: block !important; }
+        .dropdown-content button { background: none; border: none; color: white; padding: 10px 12px; width: 100%; text-align: left; cursor: pointer; margin: 3px 0; border-radius: 6px; transition: all 0.2s; font-size: 13px; }
+        .dropdown-content button:hover { background-color: rgba(255,255,255,0.15); transform: translateX(2px); }
+        .hamburger-btn { background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center; transition: all 0.3s; border-radius: 8px; }
+        .hamburger-btn:hover { background-color: rgba(255,255,255,0.15); }
+        .close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; color: white; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.3s; }
+        .close-btn:hover { background-color: rgba(255,255,255,0.2); transform: rotate(90deg); }
+        .menu-link { text-decoration: none; color: white; display: block; }
+        .menu-link:hover button { background-color: rgba(255,255,255,0.12); }
         
-        .sidebar.open {
-            left: 0;
-        }
+        .app-bar { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 14px 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
+        .app-bar h1 { margin: 0; font-size: 20px; font-weight: 700; flex: 1; text-align: center; }
+        .app-bar-left { flex: 1; }
+        .app-bar-right { flex: 1; display: flex; justify-content: flex-end; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.3s; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); border-color: white; }
         
-        .menu-items {
-            padding: 15px;
-        }
+        main { padding: 76px 20px 20px 20px; flex: 1; overflow-y: auto; }
+        .main-container { max-width: 1200px; margin: 0 auto; }
         
-        .dropdown-btn {
-            background: none;
-            border: none;
-            color: white;
-            padding: 10px;
-            width: 100%;
-            text-align: left;
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+        .welcome-section { text-align: center; margin-bottom: 35px; color: white; animation: slideDown 0.6s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .welcome-section h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .welcome-section p { font-size: 15px; opacity: 0.95; }
         
-        .dropdown-btn:hover {
-            background-color: #3498db;
-        }
+        .card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; animation: slideUp 0.6s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); border-radius: 20px 20px 0 0; }
         
-        .dropdown-content {
-            display: none;
-            padding-left: 20px;
-            background-color: rgba(255, 255, 255, 0.1);
-            margin-top: 5px;
-        }
+        .generator-card { max-width: 800px; margin: 0 auto 30px auto; position: relative; }
+        .generator-card h2 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .generator-card h2::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
         
-        .dropdown-content.show {
-            display: block !important;
-        }
+        .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .form-group label { color: #2c3e50; font-weight: 600; font-size: 14px; }
+        .form-group select { padding: 12px 14px; border: 2px solid #e8eef5; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s; background: white; }
+        .form-group select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
+        .form-group select:disabled { background: #f8fafc; opacity: 0.6; cursor: not-allowed; }
         
-        .dropdown-content button {
-            background: none;
-            border: none;
-            color: white;
-            padding: 8px;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-            margin: 2px 0;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
+        .btn { padding: 14px 20px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35); }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .dropdown-content button:hover {
-            background-color: #3498db;
-        }
+        .status-message { margin-top: 16px; text-align: center; font-size: 14px; min-height: 20px; font-weight: 500; }
+        .message { margin-top: 20px; text-align: center; font-size: 14px; color: #2c3e50; }
         
-        .hamburger-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-        }
+        .timetable-card { position: relative; margin-top: 30px; }
+        .timetable-controls { margin-bottom: 24px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+        .timetable-controls label { color: #2c3e50; font-weight: 600; font-size: 14px; }
+        .timetable-controls select { padding: 10px 12px; border-radius: 8px; border: 2px solid #e8eef5; font-size: 14px; font-family: 'Inter', sans-serif; }
         
-        .hamburger-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-            border-radius: 4px;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background-color 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .menu-link {
-            text-decoration: none;
-            color: white;
-            display: block;
-        }
-
-        .menu-link button {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .menu-link:hover button {
-            background-color: #3498db;
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%); padding: 14px 12px; text-align: left; font-weight: 600; color: #1e3a5f; border: 1px solid #e0e8f0; font-size: 13px; }
+        td { padding: 14px 12px; border: 1px solid #e0e8f0; color: #2c3e50; text-align: center; font-size: 13px; }
+        tr:nth-child(even) { background: #f9fafb; }
+        tr:hover { background: #f0f4f8; }
+        
+        @media (max-width: 768px) { 
+            .app-bar h1 { font-size: 18px; } 
+            main { padding: 70px 12px 20px 12px; }
+            .card { padding: 20px; }
+            .welcome-section h2 { font-size: 24px; }
         }
     </style>
 </head>
@@ -145,30 +95,28 @@
                     View Timetable
                     <span class="material-icons">expand_more</span>
                 </button>
-                <div id="timetableDropdown" class="dropdown-content" style="display: none;">
-                    <!-- Department links will be added here dynamically -->
-                </div>
+                <div id="timetableDropdown" class="dropdown-content" style="display: none;"></div>
             </div>
             <a href="/add_departments.html" class="menu-link">
-                <button class="dropdown-btn" style="width: 100%; margin-top: 10px;">
+                <button class="dropdown-btn" style="margin-top: 8px;">
                     Departments
                     <span class="material-icons">school</span>
                 </button>
             </a>
             <a href="/add_faculty.html" class="menu-link">
-                <button class="dropdown-btn" style="width: 100%; margin-top: 10px;">
+                <button class="dropdown-btn">
                     Faculty
                     <span class="material-icons">people</span>
                 </button>
             </a>
             <a href="/add_subjects.html" class="menu-link">
-                <button class="dropdown-btn" style="width: 100%; margin-top: 10px;">
+                <button class="dropdown-btn">
                     Subjects
                     <span class="material-icons">book</span>
                 </button>
             </a>
             <a href="/set_constraints.html" class="menu-link">
-                <button class="dropdown-btn" style="width: 100%; margin-top: 10px;">
+                <button class="dropdown-btn">
                     Subject Constraints
                     <span class="material-icons">settings</span>
                 </button>
@@ -177,85 +125,69 @@
     </div>
 
     <!-- App Bar -->
-    <div style="background: #3498db; color: white; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center;">
-        <div style="flex: 1">
+    <div class="app-bar">
+        <div class="app-bar-left">
             <button class="hamburger-btn" onclick="toggleSidebar()">
                 <span class="material-icons">menu</span>
             </button>
         </div>
-        <div style="flex: 1; text-align: center;">
-            <h1 style="margin: 0; font-size: 20px;">Admin Dashboard</h1>
-        </div>
-        <div style="flex: 1; display: flex; justify-content: flex-end;">
-            <button onclick="logout()" style="background: none; border: 1px solid white; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-                Logout
-            </button>
+        <h1>Admin Dashboard</h1>
+        <div class="app-bar-right">
+            <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
     </div>
 
     <!-- Main Content -->
-    <main style="padding: 90px 20px 20px 20px; max-width: 1200px; margin: 0 auto;">
-        <div id="adminInfo" style="text-align:center; margin-bottom: 30px;">
-            <h2 style="color: #2c3e50; margin-bottom: 10px;">Welcome, <span id="adminName"></span></h2>
-            <p style="font-size: 16px; color: #34495e;"><span id="collegeName"></span></p>
-        </div>
-
-        <div class="timetable-generator" style="max-width: 800px; margin: 0 auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h2 style="margin-bottom: 20px; color: #2c3e50;">Generate Timetable</h2>
-            
-            <div style="margin-bottom: 20px;">
-                <label for="departmentSelect" style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select Department:</label>
-                <select id="department" 
-                        style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; 
-                               font-size: 16px; margin-bottom: 20px; outline: none; transition: border-color 0.3s ease;"
-                        disabled>
-                    <option value="" disabled selected>Loading departments...</option>
-                </select>
+    <main>
+        <div class="main-container">
+            <div class="welcome-section">
+                <h2>Welcome, <span id="adminName">Admin</span></h2>
+                <p><span id="collegeName"></span></p>
             </div>
-            
-            <button id="generateButton" 
-                    style="width: 100%; background: #3498db; color: white; border: none; 
-                           padding: 12px; border-radius: 5px; cursor: pointer; 
-                           font-size: 16px; transition: all 0.3s ease;" disabled>
-                Generate Timetable
-            </button>
 
-            <div id="statusMessage" style="margin-top: 15px; text-align: center; font-size: 14px;"></div>
-        </div>
-
-        <!-- Message Display Section -->
-        <div id="message" style="margin-top: 20px; text-align: center; font-size: 16px; color: #2c3e50;">
-        </div>
-
-        <!-- Timetable Display Section -->
-        <div id="timetableContainer" style="margin-top: 30px; display: none;">
-            <div class="timetable-controls" style="margin-bottom: 20px; display: flex; justify-content: center; gap: 10px;">
-                <div style="margin-bottom: 15px;">
-                    <label for="sectionSelect" style="margin-right: 10px;">Select Section:</label>
-                    <select id="sectionSelect" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <div class="card generator-card">
+                <h2>Generate Timetable</h2>
+                <div class="form-group">
+                    <label for="department">Select Department</label>
+                    <select id="department" disabled>
+                        <option value="" disabled selected>Loading departments...</option>
                     </select>
                 </div>
+                <button id="generateButton" class="btn" disabled>Generate Timetable</button>
+                <div id="statusMessage" class="status-message"></div>
             </div>
-            
-            <div class="timetable-view" style="overflow-x: auto;">
-                <table id="timetableDisplay" style="width: 100%; border-collapse: collapse; margin-top: 20px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-                    <thead>
-                        <tr>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">Day/Period</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P1</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P2</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5; background-color: #e8f4f8;">Break</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P3</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P4</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5; background-color: #e8f4f8;">Break</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P5</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P6</th>
-                            <th style="border: 1px solid #ddd; padding: 12px; background: #f5f5f5;">P7</th>
-                        </tr>
-                    </thead>
-                    <tbody id="timetableBody">
-                    </tbody>
-                </table>
+
+            <div id="message" class="message"></div>
+
+            <!-- Timetable Display Section -->
+            <div id="timetableContainer" style="display: none;">
+                <div class="card timetable-card">
+                    <div class="timetable-controls">
+                        <div>
+                            <label for="sectionSelect">Select Section:</label>
+                            <select id="sectionSelect"></select>
+                        </div>
+                    </div>
+                    <div class="timetable-view" style="overflow-x: auto;">
+                        <table id="timetableDisplay">
+                            <thead>
+                                <tr>
+                                    <th>Day/Period</th>
+                                    <th>P1</th>
+                                    <th>P2</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P3</th>
+                                    <th>P4</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P5</th>
+                                    <th>P6</th>
+                                    <th>P7</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timetableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -270,12 +202,7 @@
             const icon = document.querySelector('.dropdown-btn .material-icons');
             const collegeId = sessionStorage.getItem('college_id');
             
-            console.log('Toggle timetable view');
-            console.log('College ID:', collegeId);
-            console.log('Dropdown content:', dropdownContent);
-            
             if (!collegeId) {
-                console.error('No college ID found');
                 showMessage('Please login again', true);
                 window.location.href = 'admin_login.html';
                 return;
@@ -284,9 +211,6 @@
             if (!dropdownContent.classList.contains('show')) {
                 dropdownContent.classList.add('show');
                 icon.textContent = 'expand_less';
-                // Show loading message
-                dropdownContent.innerHTML = '<div style="color: white; padding: 8px; text-align: center;">Loading departments...</div>';
-                // Load departments when opening the dropdown
                 loadDepartmentsWithTimetables();
             } else {
                 dropdownContent.classList.remove('show');
@@ -295,13 +219,10 @@
         }
         
         function viewDepartmentTimetable(deptName) {
-            // Store selected department in sessionStorage
             sessionStorage.setItem('selected_dept', deptName);
-            // Navigate to view_timetables.html
             window.location.href = 'view_timetables.html';
         }
 
-        // Close sidebar when clicking outside
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const hamburgerBtn = document.querySelector('.hamburger-btn');
@@ -310,31 +231,17 @@
             }
         });
 
-        // Function to load departments with timetables
         async function loadDepartmentsWithTimetables() {
             try {
                 const collegeId = sessionStorage.getItem('college_id');
-                if (!collegeId) {
-                    console.error('No college ID found');
-                    return;
-                }
-
-                console.log('Loading departments with timetables for college:', collegeId);
                 const response = await fetch(`http://localhost:5000/get-departments-with-timetables?college_id=${collegeId}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    },
+                    headers: { 'Accept': 'application/json' },
                     credentials: 'include'
                 });
 
-                console.log('Load departments with timetables response:', response);
                 const data = await response.json();
-                console.log('Departments with timetables data:', data);
-
                 const dropdownContent = document.getElementById('timetableDropdown');
-                console.log('Dropdown content element:', dropdownContent);
-
-                dropdownContent.innerHTML = ''; // Clear existing content
+                dropdownContent.innerHTML = '';
 
                 if (response.ok && data.departments && data.departments.length > 0) {
                     data.departments.forEach(dept => {
@@ -343,40 +250,22 @@
                         deptButton.onclick = () => viewDepartmentTimetable(dept);
                         deptButton.className = 'dropdown-item';
                         dropdownContent.appendChild(deptButton);
-                        console.log('Added department button:', dept);
                     });
-                } else if (response.ok && (!data.departments || data.departments.length === 0)) {
+                } else {
                     const message = document.createElement('div');
                     message.textContent = 'No timetables available';
-                    message.style.color = 'white';
+                    message.style.color = '#7f8c8d';
                     message.style.padding = '8px';
                     message.style.textAlign = 'center';
                     dropdownContent.appendChild(message);
-                } else {
-                    console.error('Failed to load departments:', data.error);
-                    const errorMsg = document.createElement('div');
-                    errorMsg.textContent = 'Failed to load departments';
-                    errorMsg.style.color = '#ff6b6b';
-                    errorMsg.style.padding = '8px';
-                    errorMsg.style.textAlign = 'center';
-                    dropdownContent.appendChild(errorMsg);
                 }
             } catch (error) {
-                console.error('Error loading departments with timetables:', error);
+                console.error('Error loading departments:', error);
                 const dropdownContent = document.getElementById('timetableDropdown');
-                dropdownContent.innerHTML = '<div style="color: #ff6b6b; padding: 8px; text-align: center;">Error loading departments</div>';
+                dropdownContent.innerHTML = '<div style="color: #e74c3c; padding: 8px; text-align: center;">Error loading departments</div>';
             }
         }
 
-        // Function to view a specific department's timetable - this redirects to view_timetables.html
-        function viewDepartmentTimetable(deptName) {
-            // Store selected department in sessionStorage
-            sessionStorage.setItem('selected_dept', deptName);
-            // Navigate to view_timetables.html
-            window.location.href = 'view_timetables.html';
-        }
-
-        // Get admin info from URL parameters or sessionStorage
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const adminName = urlParams.get('admin_name') || sessionStorage.getItem('admin_name');
@@ -386,28 +275,19 @@
             if (adminName && collegeName && collegeId) {
                 document.getElementById('adminName').textContent = adminName;
                 document.getElementById('collegeName').textContent = `College: ${collegeName}`;
-                
-                // Store in session
                 sessionStorage.setItem('admin_name', adminName);
                 sessionStorage.setItem('college_name', collegeName);
                 sessionStorage.setItem('college_id', collegeId);
             } else {
-                // Redirect to login if no admin info
-                console.log('Missing admin info, redirecting to login');
                 window.location.href = 'admin_login.html';
             }
         };
 
-        // Logout function
         function logout() {
-            // Clear session storage
-            sessionStorage.removeItem('admin_name');
-            sessionStorage.removeItem('college_name');
-            // Redirect to login page
+            sessionStorage.clear();
             window.location.href = 'admin_login.html';
-        };
+        }
 
-        // Handle timetable generation
         document.getElementById('generateButton').addEventListener('click', async function() {
             const messageDiv = document.getElementById('statusMessage');
             const button = this;
@@ -415,28 +295,26 @@
             const collegeId = sessionStorage.getItem('college_id');
             
             if (!selectedDepartment) {
-                messageDiv.style.color = 'red';
+                messageDiv.style.color = '#e74c3c';
                 messageDiv.textContent = 'Please select a department first';
                 return;
             }
             
             if (!collegeId) {
-                messageDiv.style.color = 'red';
+                messageDiv.style.color = '#e74c3c';
                 messageDiv.textContent = 'Session expired. Please login again.';
                 window.location.href = 'admin_login.html';
                 return;
             }
             
             try {
-                // Disable button and show generating status
                 button.disabled = true;
                 button.textContent = 'Generating...';
                 messageDiv.style.color = '#3498db';
-                messageDiv.textContent = 'Generating timetables... This may take several minutes. Please wait...';
+                messageDiv.textContent = 'Generating timetables... This may take several minutes.';
                 
-                // Create a timeout controller (longer timeout for complex generation)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
+                const timeoutId = setTimeout(() => controller.abort(), 600000);
                 
                 try {
                     const response = await fetch('/generate-timetable', {
@@ -456,223 +334,50 @@
                     });
                     
                     clearTimeout(timeoutId);
-                    console.log('Server response status:', response.status);
-                    
-                    // Try to parse the response
-                    let data;
-                    try {
-                        data = await response.json();
-                    } catch (parseError) {
-                        console.error('Failed to parse response:', parseError);
-                        messageDiv.style.color = '#e74c3c';
-                        messageDiv.textContent = 'Server returned invalid response. Please try again or check the server logs.';
-                        return;
-                    }
-                    
-                    console.log('Response data:', data);
+                    const data = await response.json();
                     
                     if (response.ok && data.ok) {
                         messageDiv.style.color = '#2ecc71';
-                        messageDiv.textContent = 'Timetables generated successfully! Redirecting to view timetables...';
-                        
-                        // Store department info for viewing
+                        messageDiv.textContent = 'Timetables generated successfully! Redirecting...';
                         sessionStorage.setItem('selected_dept', selectedDepartment);
-                        
-                        // Redirect to view timetables after a short delay
                         setTimeout(() => {
                             window.location.href = 'view_timetables.html';
                         }, 1500);
                     } else {
                         messageDiv.style.color = '#e74c3c';
-                        const errorMsg = data.error || data.message || 'Failed to generate timetable. Please check the server logs.';
-                        messageDiv.textContent = `Error: ${errorMsg}`;
-                        console.error('Server returned error:', data);
+                        messageDiv.textContent = `Error: ${data.error || 'Failed to generate timetable'}`;
                     }
                 } catch (fetchError) {
                     clearTimeout(timeoutId);
-                    console.error('Fetch error:', fetchError);
                     messageDiv.style.color = '#e74c3c';
-                    
                     if (fetchError.name === 'AbortError') {
-                        messageDiv.textContent = 'Request timeout. The timetable generation took too long. Please try again.';
-                    } else if (fetchError.message.includes('Failed to fetch')) {
-                        messageDiv.textContent = 'Cannot connect to server. Please check if the server is running on localhost:5000.';
+                        messageDiv.textContent = 'Request timeout. Timetable generation took too long.';
                     } else {
-                        messageDiv.textContent = `Network error: ${fetchError.message}`;
+                        messageDiv.textContent = 'Network error. Please check if the server is running.';
                     }
                 }
-            } catch (error) {
-                console.error('Error details:', error);
-                messageDiv.style.color = '#e74c3c';
-                messageDiv.textContent = `Unexpected error: ${error.message}`;
             } finally {
-                // Re-enable button with original text
                 button.disabled = false;
                 button.textContent = 'Generate Timetable';
             }
         });
 
-        // Function to load timetables
-        async function loadTimetables() {
-            try {
-                const collegeId = sessionStorage.getItem('college_id');
-                const dept = document.getElementById('department').value;
-
-                if (!collegeId || !dept) {
-                    console.error('Missing college ID or department');
-                    return;
-                }
-
-                const response = await fetch('http://localhost:5000/get-timetables', {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'include'  // Include credentials for session cookies
-                });
-                
-                console.log('Load timetables response:', response);
-                const data = await response.json();
-                console.log('Load timetables data:', data);
-                
-                if (response.ok && data.ok) {
-                    if (data.timetables) {
-                        displayTimetable(data.timetables);
-                    } else {
-                        console.error('No timetables found in response:', data);
-                        showMessage('No timetables available', true);
-                    }
-                } else {
-                    throw new Error(data.error || 'Failed to load timetables');
-                }
-            } catch (error) {
-                console.error('Error loading timetables:', error);
-                showMessage('Failed to load timetables: ' + error.message, true);
-            }
-        }
-
-        function displayTimetable(timetableData) {
-            console.log('Displaying timetable data:', timetableData);
-            
-            const timetableContainer = document.getElementById('timetableContainer');
-            const sectionSelect = document.getElementById('sectionSelect');
-            const timetableBody = document.getElementById('timetableBody');
-            
-            if (!timetableData || Object.keys(timetableData).length === 0) {
-                console.error('No timetable data to display');
-                showMessage('No timetable data available', true);
-                return;
-            }
-            
-            // Clear previous options
-            sectionSelect.innerHTML = '';
-            
-            // Add options for each section
-            Object.keys(timetableData).forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionSelect.appendChild(option);
-            });
-
-            // Function to display timetable for selected section
-            function showSectionTimetable(section) {
-                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-                timetableBody.innerHTML = '';
-
-                days.forEach(day => {
-                    const row = document.createElement('tr');
-                    
-                    // Add day cell
-                    const dayCell = document.createElement('td');
-                    dayCell.textContent = day;
-                    dayCell.style.cssText = 'border: 1px solid #ddd; padding: 12px; font-weight: bold; background: #f5f5f5;';
-                    row.appendChild(dayCell);
-
-                    // Add period cells
-                    for (let period = 1; period <= 9; period++) {
-                        const cell = document.createElement('td');
-                        if (period === 3 || period === 6) {
-                            // Break periods
-                            cell.textContent = 'Break';
-                            cell.style.cssText = 'border: 1px solid #ddd; padding: 12px; background-color: #e8f4f8;';
-                        } else {
-                            const periodKey = period > 6 ? period - 2 : period > 3 ? period - 1 : period;
-                            const slot = timetableData[section][day.toLowerCase()][periodKey - 1];
-                            
-                            if (slot) {
-                                let displayText = [];
-                                if (slot.subject_code) {
-                                    displayText.push(slot.subject_code);
-                                    if (slot.faculty_name) {
-                                        displayText.push(slot.faculty_name);
-                                    }
-                                    if (slot.is_lab) {
-                                        displayText.push('(Lab)');
-                                        cell.style.backgroundColor = '#e8f5e9'; // Light green for labs
-                                    }
-                                }
-                                cell.innerHTML = displayText.join('<br>');
-                            }
-                            cell.style.cssText = `border: 1px solid #ddd; padding: 12px; text-align: center; ${slot && slot.is_lab ? 'background-color: #e8f5e9;' : ''}`;
-                        }
-                        row.appendChild(cell);
-                    }
-                    timetableBody.appendChild(row);
-                });
-            }
-
-            // Show timetable for first section initially
-            if (sectionSelect.options.length > 0) {
-                showSectionTimetable(sectionSelect.value);
-            }
-
-            // Update timetable when section changes
-            sectionSelect.addEventListener('change', (e) => {
-                showSectionTimetable(e.target.value);
-            });
-
-            // Show the timetable container
-            timetableContainer.style.display = 'block';
-        }
-
-        // Function to fetch departments from the server
         async function loadDepartments() {
             try {
-                // Get college_id from session storage
                 const collegeId = sessionStorage.getItem('college_id');
                 if (!collegeId) {
-                    console.log('No college ID found, redirecting to login...');
                     window.location.href = 'admin_login.html';
                     return;
                 }
 
                 const response = await fetch(`http://localhost:5000/get-departments?college_id=${collegeId}`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    },
+                    headers: { 'Accept': 'application/json' },
                     credentials: 'include'
                 });
                 
-                console.log('Load departments response:', response);
                 const data = await response.json();
-                console.log('Load departments data:', data);
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to load departments');
-                }
-
-                if (!data.departments || !Array.isArray(data.departments)) {
-                    throw new Error('Invalid department data received from server');
-                }
-
                 const deptSelect = document.getElementById('department');
                 const generateButton = document.getElementById('generateButton');
-                const statusMessage = document.getElementById('statusMessage');
-                
-                if (!deptSelect) {
-                    throw new Error('Department select element not found');
-                }
                 
                 deptSelect.innerHTML = '<option value="">Select Department</option>';
                 data.departments.forEach(dept => {
@@ -682,35 +387,17 @@
                     deptSelect.appendChild(option);
                 });
                 
-                // Enable the select element
                 deptSelect.disabled = false;
-                
-                // Update button state when department is selected
                 deptSelect.addEventListener('change', () => {
-                    if (generateButton) {
-                        generateButton.disabled = !deptSelect.value;
-                    }
-                    if (statusMessage) {
-                        statusMessage.textContent = '';
-                    }
+                    generateButton.disabled = !deptSelect.value;
                 });
             } catch (error) {
                 console.error('Error loading departments:', error);
-                const errorMessage = error.message || 'Failed to load departments. Please try again later.';
-                const statusMessage = document.getElementById('statusMessage');
-                if (statusMessage) {
-                    statusMessage.style.color = 'red';
-                    statusMessage.textContent = errorMessage;
-                } else {
-                    alert(errorMessage);
-                }
-                
-                // Log additional debugging information
-                console.log('Session check:', document.cookie.includes('session'));
+                document.getElementById('statusMessage').style.color = '#e74c3c';
+                document.getElementById('statusMessage').textContent = 'Failed to load departments';
             }
         }
 
-        // Load departments when the page loads
         document.addEventListener('DOMContentLoaded', loadDepartments);
     </script>
 </body>

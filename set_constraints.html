@@ -1,1160 +1,144 @@
+<!-- set_constraints.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Set Subject Constraints</title>
+    <title>Subject Constraints</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            min-height: 100vh;
-        }
-
-        .header {
-            background: #3498db;
-            color: white;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .back-btn {
-            background: none;
-            border: 1px solid white;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .back-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        .form-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .form-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .form-group select,
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .form-group select:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        .btn-primary {
-            background-color: #3498db;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #2980b9;
-        }
-
-        .btn-secondary {
-            background-color: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #7f8c8d;
-        }
-
-        .btn-danger {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #c0392b;
-        }
-
-        .constraints-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .constraints-table th,
-        .constraints-table td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        .constraints-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .constraints-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .constraints-table tr:hover {
-            background-color: #f0f0f0;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .badge-strict {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .badge-forbidden {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-
-        .badge-lab {
-            background-color: #e0f2f1;
-            color: #00695c;
-            font-size: 11px;
-        }
-
-        .badge-last {
-            background-color: #fff3e0;
-            color: #e65100;
-            font-size: 11px;
-        }
-
-        .subject-meta {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .period-option-disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .period-option-disabled:hover {
-            background-color: #f0f0f0;
-        }
-
-        .constraint-counter {
-            display: inline-block;
-            background-color: #e3f2fd;
-            border-left: 3px solid #2196F3;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        .constraint-progress {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 6px;
-            background-color: #e0e0e0;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background-color: #4caf50;
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-fill.warning {
-            background-color: #ff9800;
-        }
-
-        .progress-fill.danger {
-            background-color: #f44336;
-        }
-
-        .progress-text {
-            font-size: 11px;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .success-message {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
-        .two-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            .two-column {
-                grid-template-columns: 1fr;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; }
+        
+        .app-bar { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 14px 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; gap: 16px; }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.3s; }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+        .app-bar h1 { flex: 1; font-size: 20px; font-weight: 700; }
+        
+        .container { max-width: 900px; margin: 76px auto 20px; padding: 30px 20px; }
+        
+        .card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; animation: slideUp 0.6s ease; position: relative; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        h2 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 14px; }
+        
+        input[type="text"], input[type="number"], select { width: 100%; padding: 12px 14px; border: 2px solid #e8eef5; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s; background: #f8fafc; }
+        input:focus, select:focus { outline: none; border-color: #3498db; background: white; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
+        
+        .btn { padding: 14px 24px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35); width: 100%; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45); }
+        
+        .message { margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; padding: 12px; border-radius: 8px; display: none; }
+        .success { background: #dbeafe; color: #0369a1; }
+        .error { background: #fee2e2; color: #991b1b; }
+        
+        @media (max-width: 768px) { .container { margin-top: 70px; padding: 20px 12px; } .card { padding: 20px; } }
     </style>
 </head>
 <body>
-    <header class="header">
-        <button onclick="goBack()" class="back-btn">
+    <div class="app-bar">
+        <button class="back-btn" onclick="window.history.back()">
             <span class="material-icons">arrow_back</span>
-            Back to Dashboard
         </button>
-        <h1>Set Subject Constraints</h1>
-        <div style="width: 100px;"></div>
-    </header>
+        <h1>Subject Constraints</h1>
+    </div>
 
     <div class="container">
-        <div class="success-message" id="successMessage"></div>
-        <div class="error-message" id="errorMessage"></div>
-
-        <div class="two-column">
-            <!-- Strict Placement Form -->
-            <div class="form-section">
-                <div class="form-title">
-                    <span class="material-icons" style="vertical-align: middle; margin-right: 5px;">done</span>
-                    Strict Placement (Must Place)
-                </div>
-                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
-                    Select subjects and days/periods where they MUST be scheduled.
-                </p>
-                
-                <div style="background-color: #e3f2fd; border-left: 4px solid #2196F3; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 12px;">
-                    <strong>⚠️ Constraints Must Follow Rules:</strong>
-                    <ul style="margin: 8px 0 0 20px; line-height: 1.6;">
-                        <li><strong>Lab subjects</strong> can ONLY be at: P1, P3, P5, P6 (NOT P2/P4 - crosses breaks)</li>
-                        <li><strong>Last-period subjects</strong> (MC1, MC2, REMEDIAL): ONLY at P6-P7</li>
-                        <li>Do NOT constrain more slots than subject hours (e.g., 2-hour subject = max 2 constraints)</li>
-                    </ul>
-                </div>
-                
+        <div class="card">
+            <h2><span class="material-icons" style="color: #3498db;">settings</span>Set Subject Constraints</h2>
+            
+            <form id="constraintForm">
                 <div class="form-group">
-                    <label>Department</label>
-                    <select id="strictDept" onchange="loadStrictSubjects()">
-                        <option value="">Select Department</option>
+                    <label for="subject">Subject</label>
+                    <select id="subject" required>
+                        <option value="" disabled selected>Select subject...</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>Section</label>
-                    <select id="strictSection" onchange="loadStrictSubjects()">
-                        <option value="">Select Section</option>
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
-                    </select>
+                    <label for="min_days">Minimum Days Per Week</label>
+                    <input type="number" id="min_days" min="1" max="5" value="1" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Subject</label>
-                    <select id="strictSubject" onchange="onStrictSubjectChange()">
-                        <option value="">Select Subject</option>
-                    </select>
+                    <label for="max_days">Maximum Days Per Week</label>
+                    <input type="number" id="max_days" min="1" max="5" value="5" required>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Day</label>
-                        <select id="strictDay">
-                            <option value="">Select Day</option>
-                            <option value="Mon">Monday</option>
-                            <option value="Tue">Tuesday</option>
-                            <option value="Wed">Wednesday</option>
-                            <option value="Thu">Thursday</option>
-                            <option value="Fri">Friday</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Period</label>
-                        <select id="strictPeriod">
-                            <option value="">Select Period</option>
-                            <option value="1">P1</option>
-                            <option value="2">P2</option>
-                            <option value="3">P3</option>
-                            <option value="4">P4</option>
-                            <option value="5">P5</option>
-                            <option value="6">P6</option>
-                            <option value="7">P7</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="display: flex; align-items: flex-end;">
-                        <button class="btn btn-primary" onclick="addStrictConstraint()" style="width: 100%;">
-                            Add Constraint
-                        </button>
-                    </div>
-                </div>
-
-                <h4 style="margin-top: 20px; margin-bottom: 10px;">Constraint Summary:</h4>
-                <div class="constraint-counter-display" style="margin-bottom: 15px;"></div>
-                
-                <h4 style="margin-top: 20px; margin-bottom: 10px;">Added Constraints:</h4>
-                <table class="constraints-table" id="strictTable">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Day</th>
-                            <th>Period</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="strictTableBody">
-                        <tr><td colspan="4" style="text-align: center; color: #999;">No constraints added yet</td></tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Forbidden Placement Form -->
-            <div class="form-section">
-                <div class="form-title">
-                    <span class="material-icons" style="vertical-align: middle; margin-right: 5px;">block</span>
-                    Forbidden Placement (Cannot Place)
-                </div>
-                <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
-                    Select subjects and days/periods where they CANNOT be scheduled.
-                </p>
-
-                <div style="background-color: #fff3e0; border-left: 4px solid #FF9800; padding: 12px; margin-bottom: 15px; border-radius: 4px; font-size: 12px;">
-                    <strong>⚠️ Forbidden Constraint Notes:</strong>
-                    <ul style="margin: 8px 0 0 20px; line-height: 1.6;">
-                        <li>Avoid forbidding <strong>last-period subjects</strong> (MC1, MC2) - may cause scheduling failure</li>
-                        <li>Do NOT forbid all available slots - subject must have at least one placement slot</li>
-                        <li>Forbidden constraints take precedence over placement preferences</li>
-                    </ul>
-                </div>
-
-                <div class="form-group">
-                    <label>Department</label>
-                    <select id="forbiddenDept" onchange="loadForbiddenSubjects()">
-                        <option value="">Select Department</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Section</label>
-                    <select id="forbiddenSection" onchange="loadForbiddenSubjects()">
-                        <option value="">Select Section</option>
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Subject</label>
-                    <select id="forbiddenSubject" onchange="onForbiddenSubjectChange()">
-                        <option value="">Select Subject</option>
-                    </select>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Day</label>
-                        <select id="forbiddenDay">
-                            <option value="">Select Day</option>
-                            <option value="Mon">Monday</option>
-                            <option value="Tue">Tuesday</option>
-                            <option value="Wed">Wednesday</option>
-                            <option value="Thu">Thursday</option>
-                            <option value="Fri">Friday</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Period</label>
-                        <select id="forbiddenPeriod">
-                            <option value="">Select Period</option>
-                            <option value="1">P1</option>
-                            <option value="2">P2</option>
-                            <option value="3">P3</option>
-                            <option value="4">P4</option>
-                            <option value="5">P5</option>
-                            <option value="6">P6</option>
-                            <option value="7">P7</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="display: flex; align-items: flex-end;">
-                        <button class="btn btn-primary" onclick="addForbiddenConstraint()" style="width: 100%;">
-                            Add Constraint
-                        </button>
-                    </div>
-                </div>
-
-                <h4 style="margin-top: 20px; margin-bottom: 10px;">Constraint Summary:</h4>
-                <div class="constraint-counter-display" style="margin-bottom: 15px;"></div>
-                
-                <h4 style="margin-top: 20px; margin-bottom: 10px;">Added Constraints:</h4>
-                <table class="constraints-table" id="forbiddenTable">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Day</th>
-                            <th>Period</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="forbiddenTableBody">
-                        <tr><td colspan="4" style="text-align: center; color: #999;">No constraints added yet</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="form-section" style="margin-top: 20px;">
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="saveAllConstraints()">Save All Constraints</button>
-                <button class="btn btn-secondary" onclick="clearAllConstraints()">Clear All</button>
-            </div>
+                <button type="submit" class="btn">Save Constraints</button>
+                <div id="message" class="message"></div>
+            </form>
         </div>
     </div>
 
     <script>
-        let strictConstraints = [];
-        let forbiddenConstraints = [];
-        let savedStrictConstraints = [];  // Track what's already in DB for strict side
-        let savedForbiddenConstraints = [];  // Track what's already in DB for forbidden side
-        let lastStrictDept = null;  // Track last selected dept/section for strict
-        let lastStrictSection = null;
-        let lastForbiddenDept = null;  // Track last selected dept/section for forbidden
-        let lastForbiddenSection = null;
-        let departments = [];
-        let subjectsPerDept = {};
-
-        // Load departments on page load
-        window.onload = async function() {
-            await loadDepartments();
-        };
-
-        async function loadDepartments() {
+        async function loadSubjects() {
             try {
-                const response = await fetch('/get-all-departments');
+                const collegeId = sessionStorage.getItem('college_id');
+                const response = await fetch(`/get-subjects?college_id=${collegeId}`, { credentials: 'include' });
                 const data = await response.json();
                 
-                if (data.ok && data.departments) {
-                    departments = data.departments;
-                    populateDepartmentSelects();
-                }
-            } catch (error) {
-                console.error('Error loading departments:', error);
-                showError('Failed to load departments');
-            }
-        }
-
-        function populateDepartmentSelects() {
-            const strictSelect = document.getElementById('strictDept');
-            const forbiddenSelect = document.getElementById('forbiddenDept');
-            
-            departments.forEach(dept => {
-                const option1 = document.createElement('option');
-                option1.value = dept.name;
-                option1.textContent = dept.name;
-                strictSelect.appendChild(option1);
-                
-                const option2 = document.createElement('option');
-                option2.value = dept.name;
-                option2.textContent = dept.name;
-                forbiddenSelect.appendChild(option2);
-            });
-        }
-
-        async function loadStrictSubjects() {
-            const dept = document.getElementById('strictDept').value;
-            const section = document.getElementById('strictSection').value;
-            
-            if (!dept || !section) {
-                document.getElementById('strictSubject').innerHTML = '<option value="">Select Subject</option>';
-                return;
-            }
-
-            // If dept/section changed, reload constraints from DB for this combo
-            if (dept !== lastStrictDept || section !== lastStrictSection) {
-                lastStrictDept = dept;
-                lastStrictSection = section;
-                await loadConstraintsForDeptSection(dept, section);
-            }
-
-            await loadSubjectsForDeptSection(dept, section, 'strictSubject');
-        }
-
-        async function loadForbiddenSubjects() {
-            const dept = document.getElementById('forbiddenDept').value;
-            const section = document.getElementById('forbiddenSection').value;
-            
-            if (!dept || !section) {
-                document.getElementById('forbiddenSubject').innerHTML = '<option value="">Select Subject</option>';
-                return;
-            }
-
-            // If dept/section changed, reload constraints from DB for this combo
-            if (dept !== lastForbiddenDept || section !== lastForbiddenSection) {
-                lastForbiddenDept = dept;
-                lastForbiddenSection = section;
-                await loadConstraintsForDeptSection(dept, section);
-            }
-
-            await loadSubjectsForDeptSection(dept, section, 'forbiddenSubject');
-        }
-
-        async function loadConstraintsForDeptSection(dept, section) {
-            try {
-                console.log(`Fetching constraints for ${dept}/${section}`);
-                const res = await fetch(`/get-constraints?dept_name=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`);
-                const data = await res.json();
-                console.log('Constraint data:', data);
-                if (data.ok) {
-                    strictConstraints = data.strict || [];
-                    forbiddenConstraints = data.forbidden || [];
-                    // Track what's already saved in DB
-                    savedStrictConstraints = JSON.parse(JSON.stringify(strictConstraints));
-                    savedForbiddenConstraints = JSON.parse(JSON.stringify(forbiddenConstraints));
-                    console.log('Loaded strict:', strictConstraints, 'forbidden:', forbiddenConstraints);
-                    updateStrictTable();
-                    updateForbiddenTable();
-                } else {
-                    console.warn('No constraints found or error:', data);
-                    // Clear any loaded constraints
-                    strictConstraints = [];
-                    forbiddenConstraints = [];
-                    savedStrictConstraints = [];
-                    savedForbiddenConstraints = [];
-                    updateStrictTable();
-                    updateForbiddenTable();
-                }
-            } catch (err) {
-                console.error('Error fetching constraints:', err);
-            }
-        }
-
-        async function loadSubjectsForDeptSection(dept, section, selectId) {
-            try {
-                console.log(`Loading subjects for ${dept}/${section}`);
-                const response = await fetch(`/get-subjects?dept_name=${encodeURIComponent(dept)}&section=${encodeURIComponent(section)}`);
-                const data = await response.json();
-                
-                console.log('Received subjects:', data);
-                
-                const select = document.getElementById(selectId);
-                select.innerHTML = '<option value="">Select Subject</option>';
-                
-                if (data.ok && data.subjects) {
-                    console.log(`Adding ${data.subjects.length} subjects to select`);
-                    // Store subject metadata globally for reference
-                    window.subjectMetadata = {};
-                    data.subjects.forEach(subject => {
-                        window.subjectMetadata[subject.name] = {
-                            hours: subject.hours,
-                            lab: subject.lab,
-                            last: subject.last,
-                            faculty: subject.faculty
-                        };
-                        
-                        // Create option with metadata display
+                const select = document.getElementById('subject');
+                select.innerHTML = '<option value="" disabled selected>Select subject...</option>';
+                if (data.subjects) {
+                    data.subjects.forEach(s => {
                         const option = document.createElement('option');
-                        option.value = subject.name;
-                        
-                        // Build display text with metadata
-                        let displayText = subject.name;
-                        let badges = [];
-                        if (subject.lab) badges.push('[LAB]');
-                        if (subject.last) badges.push('[LAST]');
-                        displayText += ` ${badges.join(' ')} (${subject.hours}hrs) - ${subject.faculty}`;
-                        
-                        option.textContent = displayText;
+                        option.value = s.subject_code;
+                        option.textContent = `${s.subject_code} - ${s.subject_name}`;
                         select.appendChild(option);
                     });
-                } else {
-                    console.error('No subjects found or error:', data);
-                    showError(data.error || 'No subjects found');
                 }
             } catch (error) {
-                console.error('Error loading subjects:', error);
-                showError('Error loading subjects: ' + error.message);
+                console.error('Error:', error);
             }
         }
 
-        function updatePeriodOptions(selectId, type) {
-            const subjectSelect = document.getElementById(selectId === 'strictPeriod' ? 'strictSubject' : 'forbiddenSubject');
-            const periodSelect = document.getElementById(selectId);
-            const subject = subjectSelect.value;
+        document.getElementById('constraintForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            if (!subject || !window.subjectMetadata[subject]) {
-                // Reset to all periods if no subject selected
-                periodSelect.innerHTML = '<option value="">Select Period</option>';
-                for (let i = 1; i <= 7; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `P${i}`;
-                    periodSelect.appendChild(option);
-                }
-                return;
-            }
-            
-            const metadata = window.subjectMetadata[subject];
-            const isLab = metadata.lab;
-            const isLast = metadata.last;
-            
-            // Determine valid periods
-            let validPeriods = [];
-            let invalidReasons = {};
-            
-            if (isLab && isLast) {
-                // MC1, MC2: Must be P6-P7 only
-                validPeriods = [6, 7];
-                invalidReasons = {
-                    1: 'Lab & Last-period: must be P6-P7 only',
-                    2: 'Lab & Last-period: must be P6-P7 only',
-                    3: 'Lab & Last-period: must be P6-P7 only',
-                    4: 'Lab & Last-period: must be P6-P7 only',
-                    5: 'Lab & Last-period: must be P6-P7 only'
-                };
-            } else if (isLab) {
-                // Regular labs: P1, P3, P5, P6 (not P2-P4 which cross breaks)
-                validPeriods = [1, 3, 5, 6];
-                invalidReasons = {
-                    2: 'Lab cannot start at P2 (crosses break)',
-                    4: 'Lab cannot start at P4 (crosses break)',
-                    7: 'Labs need 2 consecutive periods (P7 is last)'
-                };
-            } else if (isLast) {
-                // Other last-period subjects: P6-P7 only
-                validPeriods = [6, 7];
-                invalidReasons = {
-                    1: 'Last-period subject: must be P6-P7 only',
-                    2: 'Last-period subject: must be P6-P7 only',
-                    3: 'Last-period subject: must be P6-P7 only',
-                    4: 'Last-period subject: must be P6-P7 only',
-                    5: 'Last-period subject: must be P6-P7 only'
-                };
-            } else {
-                // Regular non-lab subjects: all periods available
-                validPeriods = [1, 2, 3, 4, 5, 6, 7];
-            }
-            
-            // Rebuild period options
-            periodSelect.innerHTML = '<option value="">Select Period</option>';
-            for (let i = 1; i <= 7; i++) {
-                const option = document.createElement('option');
-                option.value = i;
-                
-                if (validPeriods.includes(i)) {
-                    option.textContent = `P${i}`;
-                    option.disabled = false;
-                } else {
-                    option.textContent = `P${i} ✗ (${invalidReasons[i] || 'Not allowed'})`;
-                    option.disabled = true;
-                    option.className = 'period-option-disabled';
-                }
-                
-                periodSelect.appendChild(option);
-            }
-        }
-
-        // Update period options when subject changes (for strict constraints)
-        function onStrictSubjectChange() {
-            updatePeriodOptions('strictPeriod', 'strict');
-        }
-
-        // Update period options when subject changes (for forbidden constraints)
-        function onForbiddenSubjectChange() {
-            updatePeriodOptions('forbiddenPeriod', 'forbidden');
-        }
-
-        function addStrictConstraint() {
-            const subject = document.getElementById('strictSubject').value;
-            const day = document.getElementById('strictDay').value;
-            const period = document.getElementById('strictPeriod').value;
-
-            if (!subject || !day || !period) {
-                showError('Please select subject, day, and period');
-                return;
-            }
-
-            // Check if constraint already exists
-            const exists = strictConstraints.some(c => c.subject === subject && c.day === day && c.period === period);
-            if (exists) {
-                showError('This constraint already exists');
-                return;
-            }
-
-            // CRITICAL: Check if adding this constraint would exceed subject hours
-            const metadata = window.subjectMetadata?.[subject];
-            if (!metadata) {
-                showError('Subject metadata not found. Please reload the page.');
-                return;
-            }
-            const currentCount = strictConstraints.filter(c => c.subject === subject).length;
-            const totalHours = metadata.hours;
-            
-            if (currentCount >= totalHours) {
-                showError(`ERROR: Cannot add more constraints for '${subject}'. Already have ${currentCount}/${totalHours} hours constrained. Max limit reached.`);
-                return;
-            }
-
-            // Prevent overlap with forbidden constraints
-            const conflictInForbidden = forbiddenConstraints.some(c => c.subject === subject && c.day === day && c.period === period);
-            if (conflictInForbidden) {
-                showError('Conflict: This subject is already forbidden at the selected day & period. Remove the forbidden constraint first.');
-                return;
-            }
-
-            // Validate lab constraints - labs cannot start at P2 or P4 (cross breaks)
-            const labSubjects = ['R', 'DSA LAB', 'DDCO Lab', 'OS Lab', 'JAVA Lab', 'SCR', 'MC1', 'MC2', 'SET', 'MP', 'OODPL LAB', 'CNM Lab', 'RPA Lab', 'PC Lab', 'PROJECT'];
-            if (labSubjects.includes(subject)) {
-                if (period === '2' || period === '4') {
-                    showError(`ERROR: Lab subject '${subject}' cannot be placed at P${period} (crosses break). Valid positions: P1, P3, P5, P6 only.`);
-                    return;
-                }
-            }
-
-            // Validate last=True subjects - must be at P6 or P7
-            const lastSubjects = ['MC1', 'MC2', 'REMEDIAL'];
-            if (lastSubjects.includes(subject)) {
-                if (period !== '6' && period !== '7') {
-                    showError(`ERROR: Subject '${subject}' (last=True) can ONLY be placed at P6 or P7. You selected P${period}.`);
-                    return;
-                }
-            }
-
-            strictConstraints.push({ subject, day, period });
-            updateStrictTable();
-            clearStrictForm();
-        }
-
-        function addForbiddenConstraint() {
-            const subject = document.getElementById('forbiddenSubject').value;
-            const day = document.getElementById('forbiddenDay').value;
-            const period = document.getElementById('forbiddenPeriod').value;
-
-            if (!subject || !day || !period) {
-                showError('Please select subject, day, and period');
-                return;
-            }
-
-            // Warn for last=True subjects in forbidden list (should be careful)
-            const lastSubjects = ['MC1', 'MC2', 'REMEDIAL'];
-            if (lastSubjects.includes(subject)) {
-                const confirm_msg = `WARNING: '${subject}' is a last-period subject. Forbidding it at P${period} may cause scheduling conflicts. Continue anyway?`;
-                if (!window.confirm(confirm_msg)) {
-                    return;
-                }
-            }
-
-            // Check if constraint already exists
-            const exists = forbiddenConstraints.some(c => c.subject === subject && c.day === day && c.period === period);
-            if (exists) {
-                showError('This constraint already exists');
-                return;
-            }
-
-            // Prevent overlap with strict constraints
-            const conflictInStrict = strictConstraints.some(c => c.subject === subject && c.day === day && c.period === period);
-            if (conflictInStrict) {
-                showError('Conflict: This subject is already fixed (strict) at the selected day & period. Remove the strict constraint first.');
-                return;
-            }
-
-            forbiddenConstraints.push({ subject, day, period });
-            updateForbiddenTable();
-            clearForbiddenForm();
-        }
-
-        function removeStrictConstraint(index) {
-            strictConstraints.splice(index, 1);
-            updateStrictTable();
-        }
-
-        function removeForbiddenConstraint(index) {
-            forbiddenConstraints.splice(index, 1);
-            updateForbiddenTable();
-        }
-
-        function updateStrictTable() {
-            const tbody = document.getElementById('strictTableBody');
-            
-            if (strictConstraints.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No constraints added yet</td></tr>';
-            } else {
-                tbody.innerHTML = strictConstraints.map((constraint, index) => {
-                    const metadata = window.subjectMetadata?.[constraint.subject];
-                    let subjectDisplay = `<strong>${constraint.subject}</strong>`;
-                    if (metadata) {
-                        const badges = [];
-                        if (metadata.lab) badges.push('<span class="badge badge-lab">LAB</span>');
-                        if (metadata.last) badges.push('<span class="badge badge-last">LAST</span>');
-                        subjectDisplay += ` ${badges.join(' ')}<br><small style="color: #666;">${metadata.hours}hrs • ${metadata.faculty}</small>`;
-                    }
-                    return `
-                        <tr>
-                            <td>${subjectDisplay}</td>
-                            <td>${constraint.day}</td>
-                            <td>Period ${constraint.period}</td>
-                            <td>
-                                <button class="btn btn-danger" onclick="removeStrictConstraint(${index})" style="padding: 5px 10px; font-size: 12px;">
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-            
-            updateStrictCounterDisplay();
-        }
-
-        function updateForbiddenTable() {
-            const tbody = document.getElementById('forbiddenTableBody');
-            
-            if (forbiddenConstraints.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No constraints added yet</td></tr>';
-            } else {
-                tbody.innerHTML = forbiddenConstraints.map((constraint, index) => {
-                    const metadata = window.subjectMetadata?.[constraint.subject];
-                    let subjectDisplay = `<strong>${constraint.subject}</strong>`;
-                    if (metadata) {
-                        const badges = [];
-                        if (metadata.lab) badges.push('<span class="badge badge-lab">LAB</span>');
-                        if (metadata.last) badges.push('<span class="badge badge-last">LAST</span>');
-                        subjectDisplay += ` ${badges.join(' ')}<br><small style="color: #666;">${metadata.hours}hrs • ${metadata.faculty}</small>`;
-                    }
-                    return `
-                        <tr>
-                            <td>${subjectDisplay}</td>
-                            <td>${constraint.day}</td>
-                            <td>Period ${constraint.period}</td>
-                            <td>
-                                <button class="btn btn-danger" onclick="removeForbiddenConstraint(${index})" style="padding: 5px 10px; font-size: 12px;">
-                                    Remove
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-            
-            updateForbiddenCounterDisplay();
-        }
-
-        function updateStrictCounterDisplay() {
-            const counterDiv = document.querySelector('.form-section:has(#strictTable) .constraint-counter-display');
-            if (!counterDiv) return;
-            
-            buildStrictCounterHtml(strictConstraints, forbiddenConstraints, counterDiv);
-        }
-
-        function updateForbiddenCounterDisplay() {
-            const counterDiv = document.querySelector('.form-section:has(#forbiddenTable) .constraint-counter-display');
-            if (!counterDiv) return;
-            
-            buildForbiddenCounterHtml(forbiddenConstraints, counterDiv);
-        }
-
-        function buildStrictCounterHtml(strict, forbidden, targetDiv) {
-            const strictSubjects = new Set(strict.map(c => c.subject));
-            
-            if (strictSubjects.size === 0) {
-                targetDiv.innerHTML = '';
-                return;
-            }
-            
-            let counterHtml = '<div style="margin: 15px 0; display: grid; gap: 8px;">';
-            
-            [...strictSubjects].sort().forEach(subject => {
-                const strictCount = strict.filter(c => c.subject === subject).length;
-                const forbiddenCount = forbidden.filter(c => c.subject === subject).length;
-                const metadata = window.subjectMetadata?.[subject];
-                const totalHours = metadata?.hours || 0;
-                
-                const percentage = totalHours > 0 ? (strictCount / totalHours) * 100 : 0;
-                let fillClass = 'progress-fill';
-                if (percentage >= 100) fillClass += ' danger';
-                else if (percentage >= 75) fillClass += ' warning';
-                
-                const warningText = strictCount >= totalHours ? ' ⚠️ ALL HOURS CONSTRAINED' : strictCount > 0 ? ` (${totalHours - strictCount} slots free)` : '';
-                const forbiddenText = forbiddenCount > 0 ? ` • ${forbiddenCount} forbidden` : '';
-                
-                counterHtml += `
-                    <div style="font-size: 12px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <strong>${subject}</strong>
-                            <span>${strictCount}/${totalHours}h${forbiddenText}${warningText}</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="${fillClass}" style="width: ${Math.min(percentage, 100)}%;"></div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            counterHtml += '</div>';
-            targetDiv.innerHTML = counterHtml;
-        }
-
-        function buildForbiddenCounterHtml(forbidden, targetDiv) {
-            const forbiddenSubjects = new Set(forbidden.map(c => c.subject));
-            
-            if (forbiddenSubjects.size === 0) {
-                targetDiv.innerHTML = '';
-                return;
-            }
-            
-            let counterHtml = '<div style="margin: 15px 0; display: grid; gap: 8px;">';
-            
-            [...forbiddenSubjects].sort().forEach(subject => {
-                const forbiddenCount = forbidden.filter(c => c.subject === subject).length;
-                const metadata = window.subjectMetadata?.[subject];
-                const totalHours = metadata?.hours || 0;
-                
-                counterHtml += `
-                    <div style="font-size: 12px; padding: 8px; background-color: #fff3e0; border-left: 3px solid #ff9800; border-radius: 4px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <strong>${subject}</strong>
-                            <span style="background-color: #ff9800; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">${forbiddenCount} forbidden</span>
-                        </div>
-                        <small style="color: #666; display: block; margin-top: 4px;">Total hours: ${totalHours} • Blocked slots: ${forbiddenCount}</small>
-                    </div>
-                `;
-            });
-            
-            counterHtml += '</div>';
-            targetDiv.innerHTML = counterHtml;
-        }
-
-        function clearStrictForm() {
-            document.getElementById('strictSubject').value = '';
-            document.getElementById('strictDay').value = '';
-            document.getElementById('strictPeriod').value = '';
-        }
-
-        function clearForbiddenForm() {
-            document.getElementById('forbiddenSubject').value = '';
-            document.getElementById('forbiddenDay').value = '';
-            document.getElementById('forbiddenPeriod').value = '';
-        }
-
-        async function saveAllConstraints() {
-            const strictDept = document.getElementById('strictDept').value;
-            const strictSection = document.getElementById('strictSection').value;
-            const forbiddenDept = document.getElementById('forbiddenDept').value;
-            const forbiddenSection = document.getElementById('forbiddenSection').value;
-
-            // Only save constraints that belong to the currently selected dept/section
-            // For strict side: only save constraints where dept=strictDept and section=strictSection
-            // For forbidden side: only save constraints where dept=forbiddenDept and section=forbiddenSection
-            
-            let constraintsToSave = [];
-            let deptToSave = null;
-            let sectionToSave = null;
-
-            // Check if strict side has new constraints for its selected dept/section
-            if (strictDept && strictSection) {
-                const newStrictConstraints = strictConstraints.filter(c => 
-                    !savedStrictConstraints.some(s => s.subject === c.subject && s.day === c.day && s.period === c.period)
-                );
-                if (newStrictConstraints.length > 0) {
-                    constraintsToSave.push({ type: 'strict', constraints: newStrictConstraints });
-                    deptToSave = strictDept;
-                    sectionToSave = strictSection;
-                }
-            }
-
-            // Check if forbidden side has new constraints for its selected dept/section
-            if (forbiddenDept && forbiddenSection) {
-                const newForbiddenConstraints = forbiddenConstraints.filter(c => 
-                    !savedForbiddenConstraints.some(s => s.subject === c.subject && s.day === c.day && s.period === c.period)
-                );
-                if (newForbiddenConstraints.length > 0) {
-                    constraintsToSave.push({ type: 'forbidden', constraints: newForbiddenConstraints });
-                    deptToSave = forbiddenDept;
-                    sectionToSave = forbiddenSection;
-                }
-            }
-
-            if (constraintsToSave.length === 0) {
-                showError('No new constraints to save. Add constraints before saving.');
-                return;
-            }
-
-            if (!deptToSave || !sectionToSave) {
-                showError('Please select department and section before saving');
-                return;
-            }
-
-            // Validate that there are no conflicting constraints between strict & forbidden
-            const conflicts = [];
-            strictConstraints.forEach(sc => {
-                if (forbiddenConstraints.some(fc => fc.subject === sc.subject && fc.day === sc.day && fc.period === sc.period)) {
-                    conflicts.push(`${sc.subject} on ${sc.day} P${sc.period}`);
-                }
-            });
-
-            if (conflicts.length > 0) {
-                showError('Conflicting constraints found: ' + conflicts.join(', '));
-                return;
-            }
+            const formData = {
+                subject_code: document.getElementById('subject').value,
+                min_days_per_week: parseInt(document.getElementById('min_days').value),
+                max_days_per_week: parseInt(document.getElementById('max_days').value),
+                college_id: sessionStorage.getItem('college_id')
+            };
 
             try {
-                const response = await fetch('/save-constraints', {
+                const response = await fetch('/set-constraints', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                            dept_name: deptToSave,
-                            section: sectionToSave,
-                            strict_constraints: strictConstraints,
-                            forbidden_constraints: forbiddenConstraints
-                        })
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
                 });
 
                 const data = await response.json();
-                
-                if (data.ok) {
-                    showSuccess('Constraints saved successfully!');
-                    // Update saved constraints to match current state
-                    savedStrictConstraints = JSON.parse(JSON.stringify(strictConstraints));
-                    savedForbiddenConstraints = JSON.parse(JSON.stringify(forbiddenConstraints));
-                    // Just clear forms, keep constraints in memory (already saved to DB)
-                    clearStrictForm();
-                    clearForbiddenForm();
+                if (response.ok) {
+                    showMessage('Constraints saved successfully!', 'success');
                 } else {
-                    showError(data.error || 'Failed to save constraints');
+                    showMessage(data.error || 'Failed to save constraints', 'error');
                 }
             } catch (error) {
-                console.error('Error saving constraints:', error);
-                showError('Error saving constraints');
+                console.error('Error:', error);
+                showMessage('Error connecting to server', 'error');
             }
+        });
+
+        function showMessage(msg, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+            setTimeout(() => { messageDiv.style.display = 'none'; }, 3000);
         }
 
-        function clearAllConstraints() {
-            strictConstraints = [];
-            forbiddenConstraints = [];
-            updateStrictTable();
-            updateForbiddenTable();
-            clearStrictForm();
-            clearForbiddenForm();
-        }
-
-        function showSuccess(message) {
-            const div = document.getElementById('successMessage');
-            div.textContent = message;
-            div.style.display = 'block';
-            setTimeout(() => {
-                div.style.display = 'none';
-            }, 3000);
-        }
-
-        function showError(message) {
-            const div = document.getElementById('errorMessage');
-            div.textContent = message;
-            div.style.display = 'block';
-            setTimeout(() => {
-                div.style.display = 'none';
-            }, 3000);
-        }
-
-        function goBack() {
-            window.location.href = 'admin_dashboard.html';
-        }
+        window.addEventListener('load', loadSubjects);
     </script>
 </body>
 </html>

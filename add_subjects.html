@@ -1,4 +1,4 @@
-<!-- add_subjects -->
+<!-- add_subjects.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,562 +6,239 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Subjects</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-        .header {
-            background: white;
-            padding: 1rem 2rem;
-            margin-bottom: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .form-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        .table-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow-x: auto;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
-            font-weight: 500;
-        }
-        input, select {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        .btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        .btn:hover {
-            background: #2980b9;
-        }
-        .btn-delete {
-            background: #e74c3c;
-        }
-        .btn-delete:hover {
-            background: #c0392b;
-        }
-        .btn-edit {
-            background: #2ecc71;
-        }
-        .btn-edit:hover {
-            background: #27ae60;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-        th, td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #f8f9fa;
-            color: #2c3e50;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background: white;
-            max-width: 500px;
-            margin: 2rem auto;
-            padding: 2rem;
-            border-radius: 8px;
-        }
-         .app-bar {
-            background: #3498db;
-            color: white;
-            padding: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .app-bar h1 {
-            margin: 0;
-            font-size: 20px;
-            text-align: center;
-            flex: 1;
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 8px;
-            display: flex;
-            align-items: center;
-        }
-
-        .back-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-            border-radius: 4px;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; }
+        
+        .app-bar { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 14px 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; gap: 16px; }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: all 0.3s; }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+        .app-bar h1 { flex: 1; font-size: 20px; font-weight: 700; }
+        
+        .container { max-width: 900px; margin: 76px auto 20px; padding: 30px 20px; }
+        
+        .card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; animation: slideUp 0.6s ease; position: relative; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        h2 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        h2::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 10px; color: #2c3e50; font-weight: 600; font-size: 14px; }
+        
+        input[type="text"], select { width: 100%; padding: 12px 14px; border: 2px solid #e8eef5; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.3s; background: #f8fafc; }
+        input:focus, select:focus { outline: none; border-color: #3498db; background: white; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
+        
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        input[type="checkbox"] { width: auto; cursor: pointer; }
+        
+        .btn { padding: 14px 24px; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: 'Inter', sans-serif; box-shadow: 0 8px 24px rgba(52, 152, 219, 0.35); width: 100%; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(52, 152, 219, 0.45); }
+        
+        .message { margin-top: 16px; text-align: center; font-size: 14px; font-weight: 500; padding: 12px; border-radius: 8px; display: none; }
+        .success { background: #dbeafe; color: #0369a1; }
+        .error { background: #fee2e2; color: #991b1b; }
+        
+        .table-container { margin-top: 30px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%); padding: 14px 12px; text-align: left; font-weight: 600; color: #1e3a5f; border: 1px solid #e0e8f0; font-size: 13px; }
+        td { padding: 12px; border: 1px solid #e0e8f0; color: #2c3e50; font-size: 13px; }
+        tr:nth-child(even) { background: #f9fafb; }
+        
+        @media (max-width: 768px) { .container { margin-top: 70px; padding: 20px 12px; } .card { padding: 20px; } }
     </style>
 </head>
 <body>
-     <div class="app-bar">
-        <button class="back-btn" onclick="window.location.href='/admin_dashboard.html'">
+    <div class="app-bar">
+        <button class="back-btn" onclick="window.history.back()">
             <span class="material-icons">arrow_back</span>
         </button>
-        <h1>Add Subject</h1>
-        <div style="width: 48px;"></div> <!-- Spacer for centering -->
+        <h1>Add Subjects</h1>
     </div>
-    <div class="container">
 
-        <div class="form-container">
-            <h2>Add New Subject</h2>
+    <div class="container">
+        <div class="card">
+            <h2><span class="material-icons" style="color: #3498db;">book</span>Subject Management</h2>
+            
             <form id="subjectForm">
                 <div class="form-group">
-                    <label for="subject_name">Subject Name:</label>
-                    <input type="text" id="subject_name" required>
+                    <label for="subject_code">Subject Code</label>
+                    <input type="text" id="subject_code" placeholder="e.g., CS101" required>
                 </div>
+
                 <div class="form-group">
-                    <label for="subject_code">Subject Code:</label>
-                    <input type="text" id="subject_code" required>
+                    <label for="subject_name">Subject Name</label>
+                    <input type="text" id="subject_name" placeholder="Full subject name" required>
                 </div>
+
                 <div class="form-group">
-                    <label for="dept_name">Department:</label>
-                    <select id="dept_name" required>
-                        <option value="">Select Department</option>
+                    <label for="department">Department</label>
+                    <select id="department" required>
+                        <option value="" disabled selected>Select department...</option>
                     </select>
                 </div>
+
                 <div class="form-group">
-                    <label for="faculty_name">Faculty:</label>
-                    <select id="faculty_name" required>
-                        <option value="">Select Faculty</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="section">Section:</label>
+                    <label for="section">Section</label>
                     <select id="section" required>
-                        <option value="">Select Section</option>
+                        <option value="" disabled selected>Select section...</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="hours">Hours per Week:</label>
-                    <input type="number" id="hours" required min="1">
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="is_lab">
+                    <label for="is_lab" style="margin-bottom: 0;">Is Lab Subject</label>
                 </div>
-                <div class="form-group">
-                    <label for="lab">Is Lab:</label>
-                    <input type="checkbox" id="lab" style="width: auto;">
-                </div>
-                <div class="form-group">
-                    <label for="last">Is Last 2 Period:</label>
-                    <input type="checkbox" id="last" style="width: auto;">
-                </div>
+
                 <button type="submit" class="btn">Add Subject</button>
+                <div id="message" class="message"></div>
             </form>
-        </div>
 
-        <div class="table-container">
-            <h2>Subject List</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Subject Name</th>
-                        <th>Subject Code</th>
-                        <th>Department</th>
-                        <th>Faculty</th>
-                        <th>Section</th>
-                        <th>Hours</th>
-                        <th>Lab</th>
-                        <th>Last Period</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="subjectList">
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <h2>Edit Subject</h2>
-            <form id="editForm">
-                <input type="hidden" id="edit_id">
-                <div class="form-group">
-                    <label for="edit_subject_name">Subject Name:</label>
-                    <input type="text" id="edit_subject_name" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit_subject_code">Subject Code:</label>
-                    <input type="text" id="edit_subject_code" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit_dept_name">Department:</label>
-                    <select id="edit_dept_name" required>
-                        <option value="">Select Department</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit_faculty_name">Faculty:</label>
-                    <select id="edit_faculty_name" required>
-                        <option value="">Select Faculty</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit_section">Section:</label>
-                    <select id="edit_section" required>
-                        <option value="">Select Section</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit_hours">Hours per Week:</label>
-                    <input type="number" id="edit_hours" required min="1">
-                </div>
-                <div class="form-group">
-                    <label for="edit_lab">Is Lab:</label>
-                    <input type="checkbox" id="edit_lab" style="width: auto;">
-                </div>
-                <div class="form-group">
-                    <label for="edit_last">Is Last Period:</label>
-                    <input type="checkbox" id="edit_last" style="width: auto;">
-                </div>
-                <button type="submit" class="btn">Update Subject</button>
-                <button type="button" class="btn btn-delete" onclick="closeModal()">Cancel</button>
-            </form>
+            <div class="table-container">
+                <table id="subjectTable" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Department</th>
+                            <th>Section</th>
+                            <th>Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subjectBody"></tbody>
+                </table>
+                <div id="noDataMsg" style="text-align: center; padding: 20px; color: #a0aec0;">Loading subjects...</div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Get college_id from session storage
-        const collegeId = sessionStorage.getItem('college_id');
-        if (!collegeId) {
-            window.location.href = 'admin_login.html';
-        }
-
-        // Load departments for the college
         async function loadDepartments() {
             try {
-                const response = await fetch(`/get-departments?college_id=${collegeId}`);
+                const collegeId = sessionStorage.getItem('college_id');
+                const response = await fetch(`/get-departments?college_id=${collegeId}`, { credentials: 'include' });
                 const data = await response.json();
-                if (data.departments) {
-                    const departments = data.departments;
-                    const deptSelect = document.getElementById('dept_name');
-                    const editDeptSelect = document.getElementById('edit_dept_name');
-                    deptSelect.innerHTML = '<option value="">Select Department</option>';
-                    editDeptSelect.innerHTML = '<option value="">Select Department</option>';
-                    departments.forEach(dept => {
-                        const option = `<option value="${dept.name}">${dept.name}</option>`;
-                        deptSelect.insertAdjacentHTML('beforeend', option);
-                        editDeptSelect.insertAdjacentHTML('beforeend', option);
-                        updateSections(dept.name, dept.sections);
-                    });
-                }
+                
+                const select = document.getElementById('department');
+                select.innerHTML = '<option value="" disabled selected>Select department...</option>';
+                data.departments.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.name;
+                    option.textContent = dept.name;
+                    select.appendChild(option);
+                });
             } catch (error) {
-                console.error('Error loading departments:', error);
+                console.error('Error:', error);
             }
         }
 
-        // Update sections when department is selected
-        let departmentSections = {};
-        function updateSections(deptName, sections) {
-            departmentSections[deptName] = sections;
-        }
-
-        document.getElementById('dept_name').addEventListener('change', function() {
-            const sections = departmentSections[this.value] || [];
-            const sectionSelect = document.getElementById('section');
-            sectionSelect.innerHTML = '<option value="">Select Section</option>';
-            sections.forEach(section => {
-                sectionSelect.insertAdjacentHTML('beforeend', `<option value="${section}">${section}</option>`);
-            });
-        });
-
-        document.getElementById('edit_dept_name').addEventListener('change', function() {
-            const sections = departmentSections[this.value] || [];
-            const sectionSelect = document.getElementById('edit_section');
-            sectionSelect.innerHTML = '<option value="">Select Section</option>';
-            sections.forEach(section => {
-                sectionSelect.insertAdjacentHTML('beforeend', `<option value="${section}">${section}</option>`);
-            });
-        });
-
-        // Load faculty for the college and department
-        async function loadFaculty(deptName) {
-            try {
-                const response = await fetch(`/get-faculty?college_id=${collegeId}&dept_name=${deptName}`);
-                const data = await response.json();
-                if (data.faculty) {
-                    const facultySelect = document.getElementById('faculty_name');
-                    const editFacultySelect = document.getElementById('edit_faculty_name');
-                    facultySelect.innerHTML = '<option value="">Select Faculty</option>';
-                    editFacultySelect.innerHTML = '<option value="">Select Faculty</option>';
-                    data.faculty.forEach(faculty => {
-                        const option = `<option value="${faculty.faculty_name}">${faculty.faculty_name}</option>`;
-                        facultySelect.insertAdjacentHTML('beforeend', option);
-                        editFacultySelect.insertAdjacentHTML('beforeend', option);
+        document.getElementById('department').addEventListener('change', function() {
+            const deptName = this.value;
+            fetch(`/get-sections?dept_name=${deptName}`, { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    const select = document.getElementById('section');
+                    select.innerHTML = '<option value="" disabled selected>Select section...</option>';
+                    data.sections.forEach(sec => {
+                        const option = document.createElement('option');
+                        option.value = sec;
+                        option.textContent = sec;
+                        select.appendChild(option);
                     });
-                }
-            } catch (error) {
-                console.error('Error loading faculty:', error);
-            }
-        }
-
-        document.getElementById('dept_name').addEventListener('change', function() {
-            loadFaculty(this.value);
+                })
+                .catch(console.error);
         });
 
-        document.getElementById('edit_dept_name').addEventListener('change', function() {
-            loadFaculty(this.value);
-        });
-
-        // Add new subject
         document.getElementById('subjectForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
             const formData = {
-                subject_name: document.getElementById('subject_name').value,
                 subject_code: document.getElementById('subject_code').value,
-                dept_name: document.getElementById('dept_name').value,
-                college_id: collegeId,
-                faculty_name: document.getElementById('faculty_name').value,
+                subject_name: document.getElementById('subject_name').value,
+                dept_name: document.getElementById('department').value,
                 section: document.getElementById('section').value,
-                hours: parseInt(document.getElementById('hours').value),
-                lab: document.getElementById('lab').checked,
-                last: document.getElementById('last').checked
+                is_lab: document.getElementById('is_lab').checked,
+                college_id: sessionStorage.getItem('college_id')
             };
 
             try {
                 const response = await fetch('/add-subject', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify(formData)
                 });
 
                 const data = await response.json();
-                if (data.ok) {
-                    alert('Subject added successfully!');
-                    this.reset();
+                if (response.ok) {
+                    showMessage('Subject added successfully!', 'success');
+                    document.getElementById('subjectForm').reset();
                     loadSubjects();
                 } else {
-                    alert(data.error || 'Failed to add subject');
+                    showMessage(data.error || 'Failed to add subject', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error adding subject');
+                showMessage('Error connecting to server', 'error');
             }
         });
 
-        // Load all subjects
         async function loadSubjects() {
             try {
-                const response = await fetch(`/get-subjects?college_id=${collegeId}`);
+                const collegeId = sessionStorage.getItem('college_id');
+                const response = await fetch(`/get-subjects?college_id=${collegeId}`, { credentials: 'include' });
                 const data = await response.json();
-                const subjectList = document.getElementById('subjectList');
-                subjectList.innerHTML = '';
-                
-                if (data.subjects) {
-                    data.subjects.forEach(subject => {
-                        const row = `
-                            <tr>
-                                <td>${subject.subject_name}</td>
-                                <td>${subject.subject_code}</td>
-                                <td>${subject.dept_name}</td>
-                                <td>${subject.faculty_name}</td>
-                                <td>${subject.section}</td>
-                                <td>${subject.hours}</td>
-                                <td>${subject.lab ? 'Yes' : 'No'}</td>
-                                <td>${subject.last ? 'Yes' : 'No'}</td>
-                                <td class="action-buttons">
-                                    <button class="btn btn-edit" onclick="editSubject(${subject.id})">Edit</button>
-                                    <button class="btn btn-delete" onclick="deleteSubject(${subject.id})">Delete</button>
-                                </td>
-                            </tr>
+                const table = document.getElementById('subjectTable');
+                const tbody = document.getElementById('subjectBody');
+                const noDataMsg = document.getElementById('noDataMsg');
+
+                if (response.ok && data.subjects.length > 0) {
+                    tbody.innerHTML = '';
+                    data.subjects.forEach(s => {
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td>${s.subject_code}</td>
+                            <td>${s.subject_name}</td>
+                            <td>${s.dept_name}</td>
+                            <td>${s.section}</td>
+                            <td>${s.is_lab ? 'Lab' : 'Theory'}</td>
+                            <td><button onclick="deleteSubject('${s.subject_code}')" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
                         `;
-                        subjectList.insertAdjacentHTML('beforeend', row);
                     });
-                }
-            } catch (error) {
-                console.error('Error loading subjects:', error);
-            }
-        }
-
-        // Edit subject
-        async function editSubject(id) {
-            try {
-                // First get the subject details
-                const response = await fetch(`/get-subject/${id}`);
-                const data = await response.json();
-                
-                if (data.subject) {
-                    const subject = data.subject;
-                    
-                    // Set basic fields
-                    document.getElementById('edit_id').value = subject.id;
-                    document.getElementById('edit_subject_name').value = subject.subject_name;
-                    document.getElementById('edit_subject_code').value = subject.subject_code;
-                    document.getElementById('edit_hours').value = subject.hours;
-                    document.getElementById('edit_lab').checked = subject.lab;
-                    document.getElementById('edit_last').checked = subject.last;
-
-                    // Set department and get its sections
-                    const deptSelect = document.getElementById('edit_dept_name');
-                    deptSelect.value = subject.dept_name;
-
-                    // Update sections for the selected department
-                    const sections = departmentSections[subject.dept_name] || [];
-                    const sectionSelect = document.getElementById('edit_section');
-                    sectionSelect.innerHTML = '<option value="">Select Section</option>';
-                    sections.forEach(section => {
-                        sectionSelect.insertAdjacentHTML('beforeend', 
-                            `<option value="${section}" ${section === subject.section ? 'selected' : ''}>${section}</option>`
-                        );
-                    });
-
-                    // Update faculty for the selected department
-                    try {
-                        const facultyResponse = await fetch(`/get-faculty?college_id=${collegeId}&dept_name=${subject.dept_name}`);
-                        const facultyData = await facultyResponse.json();
-                        
-                        if (facultyData.faculty) {
-                            const facultySelect = document.getElementById('edit_faculty_name');
-                            facultySelect.innerHTML = '<option value="">Select Faculty</option>';
-                            facultyData.faculty.forEach(faculty => {
-                                facultySelect.insertAdjacentHTML('beforeend',
-                                    `<option value="${faculty.faculty_name}" ${faculty.faculty_name === subject.faculty_name ? 'selected' : ''}>${faculty.faculty_name}</option>`
-                                );
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Error loading faculty:', error);
-                    }
-
-                    // Show the modal
-                    document.getElementById('editModal').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error loading subject details');
-            }
-        }
-
-        // Update subject
-        document.getElementById('editForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const id = document.getElementById('edit_id').value;
-            const formData = {
-                subject_name: document.getElementById('edit_subject_name').value,
-                subject_code: document.getElementById('edit_subject_code').value,
-                dept_name: document.getElementById('edit_dept_name').value,
-                college_id: collegeId,
-                faculty_name: document.getElementById('edit_faculty_name').value,
-                section: document.getElementById('edit_section').value,
-                hours: parseInt(document.getElementById('edit_hours').value),
-                lab: document.getElementById('edit_lab').checked,
-                last: document.getElementById('edit_last').checked
-            };
-
-            try {
-                const response = await fetch(`/update-subject/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const data = await response.json();
-                if (data.ok) {
-                    alert('Subject updated successfully!');
-                    closeModal();
-                    loadSubjects();
+                    table.style.display = 'table';
+                    noDataMsg.style.display = 'none';
                 } else {
-                    alert(data.error || 'Failed to update subject');
+                    table.style.display = 'none';
+                    noDataMsg.textContent = 'No subjects found';
+                    noDataMsg.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error updating subject');
-            }
-        });
-
-        // Delete subject
-        function deleteSubject(id) {
-            if (confirm('Are you sure you want to delete this subject?')) {
-                fetch(`/delete-subject/${id}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        alert('Subject deleted successfully!');
-                        loadSubjects();
-                    } else {
-                        alert(data.error || 'Failed to delete subject');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error deleting subject');
-                });
             }
         }
 
-        function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
+        function showMessage(msg, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+            setTimeout(() => { messageDiv.style.display = 'none'; }, 3000);
         }
 
-        // Load initial data
-        loadDepartments();
-        loadSubjects();
+        function deleteSubject(code) {
+            if (confirm('Delete this subject?')) {
+                fetch(`/delete-subject/${code}`, { method: 'DELETE', credentials: 'include' })
+                    .then(r => r.json())
+                    .then(d => { if (d.ok) loadSubjects(); })
+                    .catch(console.error);
+            }
+        }
+
+        window.addEventListener('load', () => { loadDepartments(); loadSubjects(); });
     </script>
 </body>
 </html>

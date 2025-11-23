@@ -5,66 +5,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faculty Dashboard</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .header {
-            background: white;
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .welcome-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .welcome-text {
-            color: #2c3e50;
-        }
-        .faculty-info {
-            color: #34495e;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-        }
-        .faculty-info span {
-            color: #2980b9;
-            font-weight: 500;
-        }
-        .logout-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: background 0.3s ease;
-        }
-        .logout-btn:hover {
-            background: #c0392b;
-        }
-        .main-content {
-            padding: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #3498db 100%); min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .header { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); color: white; }
+        .welcome-section { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; gap: 20px; }
+        .welcome-text { flex: 1; min-width: 250px; }
+        .welcome-text h2 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+        .faculty-info { font-size: 13px; opacity: 0.95; line-height: 1.6; }
+        .faculty-info span { font-weight: 600; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.3s; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); border-color: white; }
+        
+        .main-content { padding: 30px 20px; flex: 1; overflow-y: auto; }
+        .main-container { max-width: 1200px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); padding: 32px; animation: slideUp 0.6s ease; position: relative; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3498db, #2ecc71, #3498db); background-size: 200% 100%; animation: gradientMove 3s ease infinite; border-radius: 20px 20px 0 0; }
+        @keyframes gradientMove { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        
+        .timetable-card h3 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .timetable-card h3::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%); }
+        th { padding: 14px 12px; text-align: center; font-weight: 600; color: #1e3a5f; border: 1px solid #e0e8f0; font-size: 13px; }
+        td { padding: 12px 8px; border: 1px solid #e0e8f0; text-align: center; font-size: 13px; color: #2c3e50; }
+        thead tr:first-child th:first-child { text-align: left; }
+        tbody tr:nth-child(odd) { background: #f9fafb; }
+        tbody tr:hover { background: #f0f4f8; }
+        tbody td:first-child { font-weight: 600; background: #f8fafc; text-align: left; padding-left: 14px; }
+        
+        .break-cell { background: #dbeafe !important; color: #0369a1; font-size: 12px; }
+        .class-cell { background: #dbeafe; }
+        .empty-cell { background: white; color: #a0aec0; }
+        
+        .loading-message { text-align: center; padding: 40px 20px; color: white; font-size: 16px; }
+        .error-message { background: #fee2e2; color: #991b1b; padding: 16px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #dc2626; display: none; }
+        
+        @media (max-width: 768px) {
+            .header { padding: 16px; }
+            .welcome-section { flex-direction: column; align-items: flex-start; }
+            .welcome-text h2 { font-size: 24px; }
+            .main-content { padding: 20px 12px; }
+            .card { padding: 20px; }
+            td, th { padding: 10px 6px; font-size: 12px; }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="welcome-section">
-            <div>
-                <h2 class="welcome-text">Welcome, <span id="facultyName"></span>!</h2>
+            <div class="welcome-text">
+                <h2>Welcome, <span id="facultyName">Faculty</span>!</h2>
                 <div class="faculty-info">
-                    Faculty ID: <span id="facultyId"></span> | 
-                    Department: <span id="deptName"></span> | 
-                    Designation: <span id="designation"></span> | 
-                    College ID: <span id="collegeId"></span>
+                    <div>Faculty ID: <span id="facultyId">N/A</span></div>
+                    <div>Department: <span id="deptName">N/A</span></div>
+                    <div>Designation: <span id="designation">N/A</span></div>
                 </div>
             </div>
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
@@ -72,26 +74,28 @@
     </div>
 
     <div class="main-content">
-        <div id="timetableContainer" style="display:none;">
-            <h3 style="color: #2c3e50; margin-bottom: 1rem;">My Timetable</h3>
-            <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <table id="timetableTable" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                    <!-- Table will be populated by JavaScript -->
-                </table>
+        <div class="main-container">
+            <div id="errorMessage" class="error-message"></div>
+            
+            <div id="timetableContainer" style="display:none;">
+                <div class="card timetable-card">
+                    <h3><span class="material-icons" style="font-size: 24px; color: #3498db;">calendar_today</span>My Timetable</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="timetableTable"></table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loadingMessage" class="loading-message">
+                <span class="material-icons" style="font-size: 40px; display: block; margin-bottom: 16px;">schedule</span>
+                Loading your timetable...
             </div>
         </div>
-        <div id="loadingMessage" style="text-align: center; padding: 2rem; color: #7f8c8d;">
-            Loading timetable...
-        </div>
-        <div id="errorMessage" style="display:none; background: #e74c3c; color: white; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;"></div>
     </div>
 
     <script>
-        // Days of week
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        const periods = ['P1', 'P2', 'Break', 'P3', 'P4', 'Break', 'P5', 'P6', 'P7'];
 
-        // Check if user is logged in
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
             if (!facultyId) {
@@ -102,23 +106,18 @@
             fetchFacultyTimetable();
         }
 
-        // Display faculty information
         function displayFacultyInfo() {
             document.getElementById('facultyName').textContent = sessionStorage.getItem('faculty_name') || 'Faculty';
             document.getElementById('facultyId').textContent = sessionStorage.getItem('faculty_id') || 'N/A';
             document.getElementById('deptName').textContent = sessionStorage.getItem('dept_name') || 'N/A';
             document.getElementById('designation').textContent = sessionStorage.getItem('designation') || 'N/A';
-            document.getElementById('collegeId').textContent = sessionStorage.getItem('college_id') || 'N/A';
         }
 
-        // Fetch faculty timetable from server
         function fetchFacultyTimetable() {
             fetch('/get-my-timetable', {
                 method: 'GET',
-                credentials: 'include',  // Include session cookies
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
             })
             .then(response => {
                 if (response.status === 401) {
@@ -143,47 +142,57 @@
             });
         }
 
-        // Display timetable in 5x9 grid format
         function displayTimetable(timetable) {
             const table = document.getElementById('timetableTable');
             table.innerHTML = '';
 
-            // Header row with period names
-            let headerHtml = '<tr style="background: #ecf0f1;">';
-            headerHtml += '<th style="padding: 0.75rem; border: 1px solid #bdc3c7; text-align: left; font-weight: 600;">Day / Period</th>';
+            // Header row
+            let headerHtml = '<thead><tr>';
+            headerHtml += '<th>Day / Period</th>';
             
             for (let p = 0; p < 9; p++) {
-                const periodName = p === 2 || p === 5 ? 'Break' : `P${p < 2 ? p + 1 : p < 5 ? p : p - 1}`;
-                headerHtml += `<th style="padding: 0.75rem; border: 1px solid #bdc3c7; text-align: center; font-weight: 600;">${periodName}</th>`;
+                const isBreak = p === 2 || p === 5;
+                const periodName = isBreak ? 'Break' : `P${p < 2 ? p + 1 : p < 5 ? p : p - 1}`;
+                headerHtml += `<th>${periodName}</th>`;
             }
-            headerHtml += '</tr>';
+            headerHtml += '</tr></thead>';
             table.innerHTML += headerHtml;
 
-            // Data rows for each day
+            // Data rows
+            let bodyHtml = '<tbody>';
             if (timetable && timetable.length > 0) {
                 timetable.forEach((dayData, dayIdx) => {
-                    let dayHtml = '<tr>';
-                    dayHtml += `<td style="padding: 0.75rem; border: 1px solid #bdc3c7; font-weight: 600; background: #f8f9fa; text-align: center;">${days[dayIdx]}</td>`;
+                    bodyHtml += '<tr>';
+                    bodyHtml += `<td>${days[dayIdx]}</td>`;
                     
                     if (dayData && dayData.length > 0) {
                         dayData.forEach((subject, periodIdx) => {
                             const isBreak = periodIdx === 2 || periodIdx === 5;
-                            const cellBg = isBreak ? '#ecf0f1' : (subject ? '#d5f4e6' : '#ffffff');
-                            const cellContent = subject ? `<small>${subject}</small>` : '-';
-                            const cellStyle = isBreak ? 'text-align: center; font-size: 0.75rem; color: #95a5a6;' : 'text-align: center; font-size: 0.85rem;';
+                            let cellClass = '';
+                            let cellContent = '-';
                             
-                            dayHtml += `<td style="padding: 0.5rem; border: 1px solid #bdc3c7; background: ${cellBg}; ${cellStyle}">${cellContent}</td>`;
+                            if (isBreak) {
+                                cellClass = 'break-cell';
+                                cellContent = 'Break';
+                            } else if (subject && subject !== 'Break') {
+                                cellClass = 'class-cell';
+                                cellContent = subject;
+                            } else {
+                                cellClass = 'empty-cell';
+                            }
+                            
+                            bodyHtml += `<td class="${cellClass}">${cellContent}</td>`;
                         });
                     }
-                    dayHtml += '</tr>';
-                    table.innerHTML += dayHtml;
+                    bodyHtml += '</tr>';
                 });
             } else {
-                table.innerHTML += '<tr><td colspan="10" style="padding: 1rem; text-align: center; color: #95a5a6;">No classes scheduled</td></tr>';
+                bodyHtml += '<tr><td colspan="10" style="padding: 30px; text-align: center; color: #a0aec0;">No classes scheduled</td></tr>';
             }
+            bodyHtml += '</tbody>';
+            table.innerHTML += bodyHtml;
         }
 
-        // Show error message
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.textContent = message;
@@ -191,15 +200,11 @@
             document.getElementById('loadingMessage').style.display = 'none';
         }
 
-        // Handle logout
         function handleLogout() {
-            // Clear session storage
             sessionStorage.clear();
-            // Redirect to login page
             window.location.href = 'faculty_login.html';
         }
 
-        // Check login status when page loads
         window.onload = checkLogin;
     </script>
 </body>
