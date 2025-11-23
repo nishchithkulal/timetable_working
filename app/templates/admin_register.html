@@ -68,7 +68,7 @@
             <button type="submit" class="btn">Register</button>
             <div id="message" class="message"></div>
         </form>
-        <a href="admin_login.html" class="login-link">Already have an account? Login →</a>
+        <a href="/admin-login" class="login-link">Already have an account? Login →</a>
     </div>
 
     <script>
@@ -100,7 +100,7 @@
                     messageDiv.style.color = '#2ecc71';
                     messageDiv.textContent = 'Registration successful! Redirecting to login...';
                     setTimeout(() => {
-                        window.location.href = 'admin_login.html';
+                        window.location.href = '/admin-login';
                     }, 1500);
                 } else {
                     messageDiv.style.color = '#e74c3c';

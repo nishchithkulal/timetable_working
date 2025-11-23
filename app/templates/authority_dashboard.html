@@ -104,7 +104,7 @@
         function checkLogin() {
             const authorityId = sessionStorage.getItem('authority_id');
             if (!authorityId) {
-                window.location.href = 'authority_login.html';
+                window.location.href = '/authority-login';
                 return;
             }
             displayAuthorityInfo();
@@ -133,7 +133,7 @@
 
         function handleLogout() {
             sessionStorage.clear();
-            window.location.href = 'authority_login.html';
+            window.location.href = '/authority-login';
         }
 
         window.addEventListener('load', checkLogin);

@@ -60,7 +60,7 @@
             </div>
             <div id="message" class="message"></div>
             <button type="submit" class="btn">Login</button>
-            <p class="register-link">Not registered? <a href="admin_register.html">Create an account</a></p>
+            <p class="register-link">Not registered? <a href="/admin-register">Create an account</a></p>
         </form>
         <a href="/" class="back-link">← Back to Home</a>
     </div>
@@ -83,7 +83,7 @@
                     sessionStorage.setItem('admin_name', admin_name);
                     sessionStorage.setItem('college_name', college_name);
                     sessionStorage.setItem('college_id', college_id);
-                    setTimeout(() => { window.location.href = 'admin_dashboard.html'; }, 500);
+                    setTimeout(() => { window.location.href = '/admin-dashboard'; }, 500);
                 } else {
                     messageDiv.style.color = '#e74c3c';
                     messageDiv.textContent = data.error || 'Login failed';

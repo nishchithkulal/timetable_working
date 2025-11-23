@@ -59,7 +59,7 @@
             <button type="submit" class="btn">Login</button>
             <div id="message" class="message"></div>
         </form>
-        <a href="index.html" class="back-link">← Back to Home</a>
+        <a href="/" class="back-link">← Back to Home</a>
     </div>
 
     <script>
@@ -91,7 +91,7 @@
                     sessionStorage.setItem('authority_name', data.authority_name);
                     
                     setTimeout(() => {
-                        window.location.href = 'authority_dashboard.html';
+                        window.location.href = '/authority-dashboard';
                     }, 500);
                 } else {
                     messageDiv.style.color = '#e74c3c';

@@ -97,25 +97,25 @@
                 </button>
                 <div id="timetableDropdown" class="dropdown-content" style="display: none;"></div>
             </div>
-            <a href="/add_departments.html" class="menu-link">
+            <a href="/add-departments" class="menu-link">
                 <button class="dropdown-btn" style="margin-top: 8px;">
                     Departments
                     <span class="material-icons">school</span>
                 </button>
             </a>
-            <a href="/add_faculty.html" class="menu-link">
+            <a href="/add-faculty-form" class="menu-link">
                 <button class="dropdown-btn">
                     Faculty
                     <span class="material-icons">people</span>
                 </button>
             </a>
-            <a href="/add_subjects.html" class="menu-link">
+            <a href="/add-subjects" class="menu-link">
                 <button class="dropdown-btn">
                     Subjects
                     <span class="material-icons">book</span>
                 </button>
             </a>
-            <a href="/set_constraints.html" class="menu-link">
+            <a href="/set-constraints" class="menu-link">
                 <button class="dropdown-btn">
                     Subject Constraints
                     <span class="material-icons">settings</span>
@@ -204,7 +204,7 @@
             
             if (!collegeId) {
                 showMessage('Please login again', true);
-                window.location.href = 'admin_login.html';
+                window.location.href = '/admin-login';
                 return;
             }
             
@@ -220,7 +220,7 @@
         
         function viewDepartmentTimetable(deptName) {
             sessionStorage.setItem('selected_dept', deptName);
-            window.location.href = 'view_timetables.html';
+            window.location.href = '/view-timetables';
         }
 
         document.addEventListener('click', function(event) {
@@ -279,13 +279,13 @@
                 sessionStorage.setItem('college_name', collegeName);
                 sessionStorage.setItem('college_id', collegeId);
             } else {
-                window.location.href = 'admin_login.html';
+                window.location.href = '/admin-login';
             }
         };
 
         function logout() {
             sessionStorage.clear();
-            window.location.href = 'admin_login.html';
+            window.location.href = '/admin-login';
         }
 
         document.getElementById('generateButton').addEventListener('click', async function() {
@@ -303,7 +303,7 @@
             if (!collegeId) {
                 messageDiv.style.color = '#e74c3c';
                 messageDiv.textContent = 'Session expired. Please login again.';
-                window.location.href = 'admin_login.html';
+                window.location.href = '/admin-login';
                 return;
             }
             
@@ -341,7 +341,7 @@
                         messageDiv.textContent = 'Timetables generated successfully! Redirecting...';
                         sessionStorage.setItem('selected_dept', selectedDepartment);
                         setTimeout(() => {
-                            window.location.href = 'view_timetables.html';
+                            window.location.href = '/view-timetables';
                         }, 1500);
                     } else {
                         messageDiv.style.color = '#e74c3c';
@@ -366,7 +366,7 @@
             try {
                 const collegeId = sessionStorage.getItem('college_id');
                 if (!collegeId) {
-                    window.location.href = 'admin_login.html';
+                    window.location.href = '/admin-login';
                     return;
                 }
 

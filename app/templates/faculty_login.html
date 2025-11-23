@@ -63,7 +63,7 @@
             <button type="submit" class="btn">Login</button>
             <div id="message" class="message"></div>
         </form>
-        <a href="index.html" class="back-link">← Back to Home</a>
+        <a href="/" class="back-link">← Back to Home</a>
     </div>
 
     <script>
@@ -101,7 +101,7 @@
                     sessionStorage.setItem('designation', data.designation);
                     
                     setTimeout(() => {
-                        window.location.href = 'faculty_dashboard.html';
+                        window.location.href = '/faculty-dashboard';
                     }, 500);
                 } else {
                     messageDiv.style.color = '#e74c3c';

@@ -99,7 +99,7 @@
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
             if (!facultyId) {
-                window.location.href = 'faculty_login.html';
+                window.location.href = '/faculty-login';
                 return;
             }
             displayFacultyInfo();
@@ -122,7 +122,7 @@
             .then(response => {
                 if (response.status === 401) {
                     showError('Session expired. Please login again.');
-                    setTimeout(() => window.location.href = 'faculty_login.html', 2000);
+                    setTimeout(() => window.location.href = '/faculty-login', 2000);
                     return null;
                 }
                 return response.json();
@@ -202,7 +202,7 @@
 
         function handleLogout() {
             sessionStorage.clear();
-            window.location.href = 'faculty_login.html';
+            window.location.href = '/faculty-login';
         }
 
         window.onload = checkLogin;
