@@ -88,9 +88,24 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label for="faculty">Faculty Name</label>
+                    <input type="text" id="faculty" placeholder="Faculty name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="hours">Hours per Week</label>
+                    <input type="number" id="hours" placeholder="e.g., 3" min="1" required>
+                </div>
+
                 <div class="checkbox-group">
                     <input type="checkbox" id="is_lab">
                     <label for="is_lab" style="margin-bottom: 0;">Is Lab Subject</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="is_last">
+                    <label for="is_last" style="margin-bottom: 0;">Is Last Class</label>
                 </div>
 
                 <button type="submit" class="btn">Add Subject</button>
@@ -105,7 +120,10 @@
                             <th>Subject Name</th>
                             <th>Department</th>
                             <th>Section</th>
+                            <th>Faculty</th>
+                            <th>Hours</th>
                             <th>Type</th>
+                            <th>Last Class</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -161,7 +179,10 @@
                 subject_name: document.getElementById('subject_name').value,
                 dept_name: document.getElementById('department').value,
                 section: document.getElementById('section').value,
-                is_lab: document.getElementById('is_lab').checked,
+                faculty_name: document.getElementById('faculty').value,
+                hours: parseInt(document.getElementById('hours').value),
+                lab: document.getElementById('is_lab').checked,
+                last: document.getElementById('is_last').checked,
                 college_id: sessionStorage.getItem('college_id')
             };
 
@@ -205,8 +226,11 @@
                             <td>${s.subject_name}</td>
                             <td>${s.dept_name}</td>
                             <td>${s.section}</td>
-                            <td>${s.is_lab ? 'Lab' : 'Theory'}</td>
-                            <td><button onclick="deleteSubject('${s.subject_code}')" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
+                            <td>${s.faculty_name}</td>
+                            <td>${s.hours}</td>
+                            <td>${s.lab ? 'Lab' : 'Theory'}</td>
+                            <td>${s.last ? 'Yes' : 'No'}</td>
+                            <td><button onclick="editSubject(${s.id})" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 4px;">Edit</button><button onclick="deleteSubject(${s.id})" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">Delete</button></td>
                         `;
                     });
                     table.style.display = 'table';
@@ -229,13 +253,70 @@
             setTimeout(() => { messageDiv.style.display = 'none'; }, 3000);
         }
 
-        function deleteSubject(code) {
+        function deleteSubject(id) {
             if (confirm('Delete this subject?')) {
-                fetch(`/delete-subject/${code}`, { method: 'DELETE', credentials: 'include' })
+                fetch(`/delete-subject/${id}`, { method: 'DELETE', credentials: 'include' })
                     .then(r => r.json())
                     .then(d => { if (d.ok) loadSubjects(); })
                     .catch(console.error);
             }
+        }
+
+        function editSubject(id) {
+            fetch(`/get-subject/${id}`, { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => {
+                    const subject = data.subject;
+                    document.getElementById('subject_code').value = subject.subject_code;
+                    document.getElementById('subject_name').value = subject.subject_name;
+                    document.getElementById('department').value = subject.dept_name;
+                    document.getElementById('faculty').value = subject.faculty_name;
+                    document.getElementById('hours').value = subject.hours;
+                    document.getElementById('is_lab').checked = subject.lab;
+                    document.getElementById('is_last').checked = subject.last;
+                    
+                    const btn = document.querySelector('.btn');
+                    btn.textContent = 'Update Subject';
+                    btn.onclick = () => updateSubject(id);
+                    btn.removeEventListener('click', null);
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        updateSubject(id);
+                    });
+                    
+                    document.getElementById('section').value = subject.section;
+                    document.getElementById('subjectForm').scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(console.error);
+        }
+
+        function updateSubject(id) {
+            const formData = {
+                subject_name: document.getElementById('subject_name').value,
+                faculty_name: document.getElementById('faculty').value,
+                hours: parseInt(document.getElementById('hours').value),
+                lab: document.getElementById('is_lab').checked,
+                last: document.getElementById('is_last').checked
+            };
+
+            fetch(`/update-subject/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        showMessage('Subject updated successfully!', 'success');
+                        document.getElementById('subjectForm').reset();
+                        document.querySelector('.btn').textContent = 'Add Subject';
+                        loadSubjects();
+                    } else {
+                        showMessage(d.error || 'Failed to update subject', 'error');
+                    }
+                })
+                .catch(console.error);
         }
 
         window.addEventListener('load', () => { loadDepartments(); loadSubjects(); });

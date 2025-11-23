@@ -1042,14 +1042,23 @@ def update_subject(id):
         subject = Subject.query.get_or_404(id)
         data = request.get_json()
         
-        subject.subject_name = data['subject_name']
-        subject.subject_code = data['subject_code']
-        subject.dept_name = data['dept_name']
-        subject.faculty_name = data['faculty_name']
-        subject.section = data['section']
-        subject.hours = data['hours']
-        subject.lab = data['lab']
-        subject.last = data['last']
+        # Update only provided fields
+        if 'subject_name' in data:
+            subject.subject_name = data['subject_name']
+        if 'subject_code' in data:
+            subject.subject_code = data['subject_code']
+        if 'dept_name' in data:
+            subject.dept_name = data['dept_name']
+        if 'faculty_name' in data:
+            subject.faculty_name = data['faculty_name']
+        if 'section' in data:
+            subject.section = data['section']
+        if 'hours' in data:
+            subject.hours = data['hours']
+        if 'lab' in data:
+            subject.lab = data['lab']
+        if 'last' in data:
+            subject.last = data['last']
         
         db.session.commit()
         return jsonify({'ok': True, 'subject': subject.to_dict()}), 200
