@@ -95,6 +95,7 @@
 
     <script>
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        let breakConfig = { first_break_period: 2, lunch_break_period: 4 }; // Default values
 
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
@@ -114,6 +115,26 @@
         }
 
         function fetchFacultyTimetable() {
+            const deptName = sessionStorage.getItem('dept_name');
+            
+            // Fetch break configuration
+            fetch(`/get-break-config?dept_name=${encodeURIComponent(deptName)}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.ok && data.break_config) {
+                    breakConfig = data.break_config;
+                    console.log('Break config loaded:', breakConfig);
+                } else {
+                    console.warn('Could not load break config:', data);
+                }
+            })
+            .catch(error => console.warn('Could not fetch break config, using defaults:', error));
+            
+            // Fetch timetable
             fetch('/get-my-timetable', {
                 method: 'GET',
                 credentials: 'include',
@@ -146,13 +167,28 @@
             const table = document.getElementById('timetableTable');
             table.innerHTML = '';
 
+            // Calculate break positions dynamically - convert strings to ints
+            const firstBreak = parseInt(breakConfig.first_break_period);
+            const lunchBreak = parseInt(breakConfig.lunch_break_period);
+            const firstBreakSlot = firstBreak + 1; // +1 for the break itself
+            const secondBreakSlot = lunchBreak + 2; // +2 for both breaks before lunch
+
             // Header row
             let headerHtml = '<thead><tr>';
             headerHtml += '<th>Day / Period</th>';
             
-            for (let p = 0; p < 9; p++) {
-                const isBreak = p === 2 || p === 5;
-                const periodName = isBreak ? 'Break' : `P${p < 2 ? p + 1 : p < 5 ? p : p - 1}`;
+            for (let p = 1; p <= 9; p++) {
+                const isBreak = p === firstBreakSlot || p === secondBreakSlot;
+                let periodName = 'Break';
+                if (!isBreak) {
+                    if (p < firstBreakSlot) {
+                        periodName = `P${p}`;
+                    } else if (p < secondBreakSlot) {
+                        periodName = `P${p - 1}`;
+                    } else {
+                        periodName = `P${p - 2}`;
+                    }
+                }
                 headerHtml += `<th>${periodName}</th>`;
             }
             headerHtml += '</tr></thead>';
@@ -167,7 +203,8 @@
                     
                     if (dayData && dayData.length > 0) {
                         dayData.forEach((subject, periodIdx) => {
-                            const isBreak = periodIdx === 2 || periodIdx === 5;
+                            const displayIdx = periodIdx + 1; // Convert 0-indexed to 1-indexed
+                            const isBreak = displayIdx === firstBreakSlot || displayIdx === secondBreakSlot;
                             let cellClass = '';
                             let cellContent = '-';
                             

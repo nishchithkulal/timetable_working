@@ -257,32 +257,48 @@ def verify_lab_integrity(section: str, timetable: Dict[int, Dict[int, Optional[s
                 if timetable[d][p] == subject:
                     positions.append((d, p))
         
-        # For labs with odd hours, allow one single period and even pairs
         expected_hours = info["hours"]
         
-        # Process pairs first
-        i = 0
+        # Labs MUST have even hours only (enforced by UI dropdown)
+        if expected_hours % 2 != 0:
+            print(f"    ✗ LAB ERROR: {subject} has odd hours ({expected_hours}) - labs must have even hours only")
+            return False
+        
+        # Number of positions must match hours
+        if len(positions) != expected_hours:
+            print(f"    ✗ LAB ERROR: {subject} has {len(positions)} periods but needs {expected_hours}")
+            return False
+        
+        # All lab periods must be in consecutive pairs
         pairs_needed = expected_hours // 2
         pairs_found = 0
         
+        i = 0
         while i < len(positions):
             if i+1 >= len(positions):
-                # If we have one more position and it's the last one for odd hours, that's okay
-                if expected_hours % 2 == 1 and pairs_found == pairs_needed:
-                    break
-                print(f"    ✗ LAB ERROR: {subject} has odd occurrences in section {section}")
+                # Odd number of positions means incomplete pairing
+                print(f"    ✗ LAB ERROR: {subject} has incomplete pairing (odd count) in section {section}")
                 return False
-            d1,p1 = positions[i]
-            d2,p2 = positions[i+1]
+            
+            d1, p1 = positions[i]
+            d2, p2 = positions[i+1]
+            
             if d1 != d2 or p2 != p1 + 1:
                 print(f"    ✗ LAB ERROR: {subject} not consecutive at {days[d1]} P{p1}")
                 return False
+            
             # Check if lab crosses break
             if p1 == 2 or p1 == 4:
                 print(f"    ✗ LAB ERROR: {subject} crosses break at {days[d1]} P{p1}-P{p2}")
                 return False
+            
             pairs_found += 1
             i += 2
+        
+        if pairs_found != pairs_needed:
+            print(f"    ✗ LAB ERROR: {subject} has {pairs_found} pairs but needs {pairs_needed}")
+            return False
+    
     return True
 
 # ==================== CONSTRAINT CHECKS ====================
@@ -431,6 +447,18 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
         faculty = get_faculty_for_subject(section, subject)
         for (day, period) in placements:
             slots_needed = 2 if is_lab else 1
+            
+            # Check faculty conflict BEFORE placing any subject (strict or not)
+            has_conflict = False
+            for slot_offset in range(slots_needed):
+                if check_faculty_conflict(faculty, section, day, period + slot_offset, faculty_schedule):
+                    has_conflict = True
+                    break
+            
+            if has_conflict:
+                print(f"    ✗ Could not place strict {subject} at {days[day]} P{period} - faculty conflict")
+                continue
+            
             if is_lab and not can_place_lab(timetable, subject, section, day, period, slots_needed):
                 print(f"    ✗ Could not place strict lab {subject} at {days[day]} P{period}")
                 continue
@@ -504,15 +532,8 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                 if is_lab:
                     # For labs, check if next period would exceed bounds
                     if period + 1 > num_periods:  # Can't place 2-period lab if no next period
-                        # Check if we need only 1 more period for odd hours
-                        remaining = info["hours"] - counters[subject]
-                        if remaining == 1:
-                            # Place single period for odd hour
-                            if not check_faculty_conflict(faculty, section, day, period, faculty_schedule):
-                                timetable[day][period] = subject
-                                counters[subject] += 1
-                                faculty_schedule[(section, day, period)] = faculty
-                                break
+                        # Labs must have even hours, so we only place in 2-period blocks
+                        # If we can't place 2 periods, skip this slot
                         continue
                     
                     remaining = info["hours"] - counters[subject]
@@ -528,13 +549,6 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                                     counters[subject] += 1
                                     faculty_schedule[(section, day, period+i)] = faculty
                                 break
-                    elif remaining == 1:
-                        # Place single period for last remaining hour of lab with odd hours
-                        if not check_faculty_conflict(faculty, section, day, period, faculty_schedule):
-                            timetable[day][period] = subject
-                            counters[subject] += 1
-                            faculty_schedule[(section, day, period)] = faculty
-                            break
                 else:
                     # For non-lab subjects, check consecutive constraint
                     old_val = timetable[day][period]
@@ -813,39 +827,92 @@ def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[st
         row = [timetable[d][p] for p in range(1, num_periods+1)]
         non_remedial = []
         remedial_count = 0
+        lab_blocks = []  # Store lab blocks to preserve continuity
 
-        # Collect non-remedial subjects and their positions
-        for p in range(1, num_periods+1):
-            s = timetable[d][p]
-            if (d, p) in locked_cells:
+        # Collect subjects and identify lab blocks
+        i = 1
+        while i <= num_periods:
+            s = timetable[d][i]
+            if (d, i) in locked_cells:
                 # Keep locked cells in place
+                i += 1
                 continue
+            
+            # Check if this is part of a lab block
+            is_part_of_lab = False
             if s and s != "REMEDIAL":
-                non_remedial.append(s)
+                info = subjects_per_section[section].get(s, {})
+                if info.get("lab", False):
+                    # This is a lab - check if it's a complete pair or incomplete
+                    if i < num_periods and timetable[d][i+1] == s:
+                        # It's a 2-period lab block
+                        lab_blocks.append((i, i+1, s))
+                        i += 2
+                        is_part_of_lab = True
+                    else:
+                        # Single period (incomplete lab - should not happen but handle it)
+                        non_remedial.append(s)
+                        i += 1
+                        is_part_of_lab = True
+                else:
+                    # Non-lab subject
+                    non_remedial.append(s)
+                    i += 1
             elif s == "REMEDIAL":
                 remedial_count += 1
+                i += 1
+            else:
+                i += 1
 
         # Clear only non-locked cells
         for p in range(1, num_periods+1):
             if (d, p) not in locked_cells:
                 timetable[d][p] = None
 
-        # Refill non-locked cells
+        # Refill non-locked cells - preserve lab blocks, prioritize placing them
         idx = 1
         non_remedial_idx = 0
+        lab_block_idx = 0
+        placed_subjects = set()  # Track which subjects have been placed
+        
         while idx <= num_periods:
             if (d, idx) in locked_cells:
                 # Skip locked cells
                 idx += 1
                 continue
 
+            # Try to place a lab block if available and we have space for 2 periods
+            if lab_block_idx < len(lab_blocks) and idx + 1 <= num_periods and (d, idx+1) not in locked_cells:
+                start, end, subject = lab_blocks[lab_block_idx]
+                # Place the 2-period lab block
+                timetable[d][idx] = subject
+                timetable[d][idx+1] = subject
+                placed_subjects.add(subject)
+                lab_block_idx += 1
+                idx += 2
+                continue
+            
+            # Place non-lab subjects
             if non_remedial_idx < len(non_remedial):
-                timetable[d][idx] = non_remedial[non_remedial_idx]
-                non_remedial_idx += 1
+                subj = non_remedial[non_remedial_idx]
+                # Don't place if this is a lab (shouldn't happen)
+                info = subjects_per_section[section].get(subj, {})
+                if not info.get("lab", False):
+                    timetable[d][idx] = subj
+                    non_remedial_idx += 1
+                else:
+                    # Skip labs in the non_remedial list (shouldn't happen)
+                    non_remedial_idx += 1
+                    continue
             elif remedial_count > 0:
                 timetable[d][idx] = "REMEDIAL"
                 remedial_count -= 1
+            
             idx += 1
+        
+        # If there are unplaced lab blocks, that's a problem
+        if lab_block_idx < len(lab_blocks):
+            print(f"    ⚠ WARNING: Could not place all lab blocks on day {d} in section {section}")
 
 # ==================== FACULTY TIMETABLE GENERATION ====================
 def generate_faculty_timetables(all_timetables: Dict[str, Dict[int, Dict[int, Optional[str]]]]) -> Dict[str, Dict[int, Dict[int, str]]]:
