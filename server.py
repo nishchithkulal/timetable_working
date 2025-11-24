@@ -560,7 +560,8 @@ def get_latest_timetables():
 
 @app.route('/get-my-timetable', methods=['GET'])
 def get_my_timetable():
-    """Get combined timetable for the logged-in faculty member from faculty_timetables table."""
+    """Get combined timetable for the logged-in faculty member from faculty_timetables table.
+    Merges all sections into one combined timetable, same as admin dashboard view."""
     try:
         faculty_id = session.get('faculty_id')
         college_id = session.get('college_id')
@@ -573,24 +574,39 @@ def get_my_timetable():
         if not faculty_record:
             return jsonify({'ok': False, 'error': 'Faculty record not found'}), 404
         
-        # Get timetable for this faculty (should have section='ALL' for combined timetable)
-        faculty_timetable = FacultyTimetable.query.filter_by(
+        # Get all timetables for this faculty (all sections)
+        faculty_timetables = FacultyTimetable.query.filter_by(
             faculty_id=faculty_id,
-            college_id=college_id,
-            section='ALL'
-        ).first()
+            college_id=college_id
+        ).all()
         
-        if not faculty_timetable:
+        if not faculty_timetables:
             return jsonify({'ok': False, 'error': 'No timetable found for this faculty'}), 404
         
-        # The timetable is already in 2D array format from storage
-        timetable = faculty_timetable.timetable
-        if isinstance(timetable, list):
-            # Already in array format
-            timetable_array = timetable
+        logging.info(f"Found {len(faculty_timetables)} timetable entries for faculty {faculty_id}")
+        
+        # If there's only one entry, use it directly
+        if len(faculty_timetables) == 1:
+            timetable = faculty_timetables[0].timetable
+            timetable_array = timetable if isinstance(timetable, list) else convert_timetable_dict_to_array(timetable)
         else:
-            # Convert if needed
-            timetable_array = convert_timetable_dict_to_array(timetable)
+            # Multiple entries - merge them into one combined timetable
+            # Initialize a combined timetable (5 days x 7 periods)
+            combined_timetable = [[None for _ in range(7)] for _ in range(5)]
+            
+            # Merge all timetables - overlay them, giving preference to earliest entries
+            for ft in faculty_timetables:
+                timetable = ft.timetable
+                timetable_array = timetable if isinstance(timetable, list) else convert_timetable_dict_to_array(timetable)
+                
+                # Fill in the combined timetable
+                for day_idx, day_data in enumerate(timetable_array):
+                    for period_idx, subject in enumerate(day_data):
+                        # Only fill if this slot is empty in combined timetable
+                        if combined_timetable[day_idx][period_idx] is None and subject:
+                            combined_timetable[day_idx][period_idx] = subject
+            
+            timetable_array = combined_timetable
         
         logging.info(f"Retrieved combined timetable for faculty {faculty_record.faculty_name} ({faculty_id})")
         
@@ -1027,7 +1043,7 @@ def add_subject():
             college_id=data['college_id'],
             faculty_name=data['faculty_name'],
             section=data['section'],
-            hours=data['hours'],
+            hours=int(data['hours']),
             lab=data['lab'],
             last=data['last']
         )
@@ -1175,7 +1191,7 @@ def update_subject(id):
         if 'section' in data:
             subject.section = data['section']
         if 'hours' in data:
-            subject.hours = data['hours']
+            subject.hours = int(data['hours'])
         if 'lab' in data:
             subject.lab = data['lab']
         if 'last' in data:

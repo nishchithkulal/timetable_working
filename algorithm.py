@@ -256,9 +256,20 @@ def verify_lab_integrity(section: str, timetable: Dict[int, Dict[int, Optional[s
             for p in range(1, num_periods+1):
                 if timetable[d][p] == subject:
                     positions.append((d, p))
+        
+        # For labs with odd hours, allow one single period and even pairs
+        expected_hours = info["hours"]
+        
+        # Process pairs first
         i = 0
+        pairs_needed = expected_hours // 2
+        pairs_found = 0
+        
         while i < len(positions):
             if i+1 >= len(positions):
+                # If we have one more position and it's the last one for odd hours, that's okay
+                if expected_hours % 2 == 1 and pairs_found == pairs_needed:
+                    break
                 print(f"    ✗ LAB ERROR: {subject} has odd occurrences in section {section}")
                 return False
             d1,p1 = positions[i]
@@ -270,6 +281,7 @@ def verify_lab_integrity(section: str, timetable: Dict[int, Dict[int, Optional[s
             if p1 == 2 or p1 == 4:
                 print(f"    ✗ LAB ERROR: {subject} crosses break at {days[d1]} P{p1}-P{p2}")
                 return False
+            pairs_found += 1
             i += 2
     return True
 
@@ -492,9 +504,19 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                 if is_lab:
                     # For labs, check if next period would exceed bounds
                     if period + 1 > num_periods:  # Can't place 2-period lab if no next period
+                        # Check if we need only 1 more period for odd hours
+                        remaining = info["hours"] - counters[subject]
+                        if remaining == 1:
+                            # Place single period for odd hour
+                            if not check_faculty_conflict(faculty, section, day, period, faculty_schedule):
+                                timetable[day][period] = subject
+                                counters[subject] += 1
+                                faculty_schedule[(section, day, period)] = faculty
+                                break
                         continue
                     
-                    if info["hours"] - counters[subject] >= 2:
+                    remaining = info["hours"] - counters[subject]
+                    if remaining >= 2:
                         if can_place_lab(timetable, subject, section, day, period, 2):
                             # Check last subject overlap (includes MC1/MC2 overlap check)
                             if info.get("last", False) or subject in ["MC1", "MC2"]:
@@ -506,6 +528,13 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                                     counters[subject] += 1
                                     faculty_schedule[(section, day, period+i)] = faculty
                                 break
+                    elif remaining == 1:
+                        # Place single period for last remaining hour of lab with odd hours
+                        if not check_faculty_conflict(faculty, section, day, period, faculty_schedule):
+                            timetable[day][period] = subject
+                            counters[subject] += 1
+                            faculty_schedule[(section, day, period)] = faculty
+                            break
                 else:
                     # For non-lab subjects, check consecutive constraint
                     old_val = timetable[day][period]
