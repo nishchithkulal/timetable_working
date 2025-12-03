@@ -10,11 +10,25 @@ faculties = {}              # Will be set dynamically
 strict_subject_placement = {}  # Will be set dynamically
 forbidden_subject_placement = {}  # Will be set dynamically
 
-# Break configuration - default values
+# Break configuration - these will be set from database using a config dict
+# Using a dict to ensure modifications affect all references
+break_config_state = {
+    'first': 2,      # First break after P2 (will be overridden by database)
+    'lunch': 4       # Lunch break after P4 (will be overridden by database)
+}
+
+# For backward compatibility
 break_periods = {
     'first': 2,      # First break after P2
     'lunch': 4       # Lunch break after P4
 }
+
+# Convenience accessors for the break configuration
+def get_first_break_period():
+    return break_config_state['first']
+
+def get_lunch_break_period():
+    return break_config_state['lunch']
 
 days = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 num_days = 5
@@ -287,8 +301,8 @@ def verify_lab_integrity(section: str, timetable: Dict[int, Dict[int, Optional[s
                 print(f"    ✗ LAB ERROR: {subject} not consecutive at {days[d1]} P{p1}")
                 return False
             
-            # Check if lab crosses break
-            if p1 == 2 or p1 == 4:
+            # Check if lab crosses break (cannot start at first_break_period or lunch_break_period)
+            if p1 == get_first_break_period() or p1 == get_lunch_break_period():
                 print(f"    ✗ LAB ERROR: {subject} crosses break at {days[d1]} P{p1}-P{p2}")
                 return False
             
@@ -352,15 +366,26 @@ def check_faculty_conflict(faculty: str, section: str, day: int, period: int,
 def check_consecutive_constraint(timetable: Dict[int, Dict[int, Optional[str]]], subject: str,
                                  day: int, period: int, is_lab: bool) -> bool:
     """
-    STRICT: Non-lab subjects can ONLY be consecutive at P2-P3 and P4-P5 (across breaks).
+    STRICT: Non-lab subjects can ONLY be consecutive at the period pairs that cross breaks.
     All other consecutive periods are BLOCKED for non-lab subjects.
     Labs are always allowed to be consecutive (they are 2-period blocks).
+    
+    For example, with breaks after periods 2 and 4:
+    - Allowed pairs: (2,3) and (4,5) [crossing the breaks]
+    - Blocked pairs: (1,2), (3,4), (5,6), (6,7) [within same "block"]
     """
     if is_lab:
         return True
 
-    # Allowed consecutive period pairs for non-lab subjects (across breaks only)
-    allowed_consecutive_pairs = [(2, 3), (4, 5)]
+    # Calculate allowed consecutive period pairs dynamically based on break configuration
+    # Periods right before and after a break can be consecutive
+    allowed_consecutive_pairs = []
+    
+    # Pair crossing first break: (first_break_period, first_break_period + 1)
+    allowed_consecutive_pairs.append((get_first_break_period(), get_first_break_period() + 1))
+    
+    # Pair crossing lunch break: (lunch_break_period, lunch_break_period + 1)
+    allowed_consecutive_pairs.append((get_lunch_break_period(), get_lunch_break_period() + 1))
 
     # Check previous period
     if period > 1 and timetable[day][period-1] == subject:
@@ -378,8 +403,8 @@ def can_place_lab(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, 
                   day: int, period: int, slots_needed: int) -> bool:
     """
     Lab placement rules with break awareness:
-    - Valid positions: P1-P2, P3-P4, P5-P6, P6-P7
-    - Invalid positions: P2-P3 (crosses first break), P4-P5 (crosses second break)
+    - Valid positions depend on break configuration (cannot start at break periods)
+    - For example, if first_break_period is 2, cannot start at P2 (would cross into break)
     - For last=True labs (MC1, MC2, MP), must be at P6-P7
     - MC1 and MC2 are enforced to P6-P7 only
     - Labs cannot be placed at P7 (only 1 slot available)
@@ -403,12 +428,19 @@ def can_place_lab(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, 
         if period != 6:
             return False
 
-    # Labs cannot start at P2 or P4 (would cross breaks)
-    if period == 2 or period == 4:
+    # Labs cannot start at periods where breaks occur (would cross into break)
+    # If break is after period X, lab cannot start at period X
+    if period == get_first_break_period() or period == get_lunch_break_period():
         return False
 
-    # Valid lab starting periods: 1, 3, 5, 6
-    valid_lab_starts = [1, 3, 5, 6]
+    # Valid lab starting periods depend on break configuration
+    # By default: 1, 3, 5, 6 (when breaks are at 2 and 4)
+    # We need to calculate based on actual break positions
+    valid_lab_starts = []
+    for p in range(1, num_periods):
+        if p != get_first_break_period() and p != get_lunch_break_period():
+            valid_lab_starts.append(p)
+    
     if period not in valid_lab_starts:
         return False
 
@@ -425,10 +457,28 @@ def can_place_lab(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, 
     return True
 
 def get_preferred_lab_periods() -> List[int]:
-    """Return lab starting periods in priority order: preferred first, fallback last"""
-    # P3, P5, P6 are preferred (don't include first slot)
-    # P1 is fallback
-    return [3, 5, 6, 1]
+    """Return lab starting periods in priority order: preferred first, fallback last.
+    Excludes periods that are break periods or would cause break crossing."""
+    # Valid lab periods are those that don't equal first_break_period or lunch_break_period
+    # By default with breaks at 2 and 4: [1, 3, 5, 6]
+    # Preferred: 3, 5, 6 (middle and end periods)
+    # Fallback: 1 (first period)
+    
+    valid_periods = []
+    for p in range(1, num_periods):  # num_periods is 7, so 1-6
+        if p != get_first_break_period() and p != get_lunch_break_period():
+            valid_periods.append(p)
+    
+    # Reorder: put 3, 5, 6 first (preferred), then 1 (fallback)
+    preferred = []
+    fallback = []
+    for p in valid_periods:
+        if p in [3, 5, 6]:
+            preferred.append(p)
+        else:
+            fallback.append(p)
+    
+    return preferred + fallback
 
 # ==================== INSERTION ALGORITHM ====================
 def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[int, Optional[str]]]]) -> Tuple[Dict[int, Dict[int, Optional[str]]], Dict[str, int]]:
@@ -1132,12 +1182,12 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         faculty_dict: Dictionary mapping subject_name to faculty_name
         strict_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for fixed placements
         forbidden_constraints: Dictionary {section: {subject: [(day, period), ...], ...}, ...} for forbidden placements
-        break_config: Dictionary {first_break_period, lunch_break_period, second_break_period} for break timings
+        break_config: Dictionary {first_break_period, lunch_break_period} for break timings (loaded from database)
     
     Returns a dictionary mapping section names to their timetables.
     Each timetable is a dictionary mapping day numbers (1-5) to dictionaries mapping period numbers (1-7) to subject names."""
     
-    global sections, subjects_per_section, faculties, assigned_multi_faculty, strict_subject_placement, forbidden_subject_placement, break_periods
+    global sections, subjects_per_section, faculties, assigned_multi_faculty, strict_subject_placement, forbidden_subject_placement, break_periods, break_config_state, num_display_slots
     
     # Set the global variables from parameters
     if section_list is not None:
@@ -1150,14 +1200,16 @@ def store_section_timetables(section_list=None, subjects_dict=None, faculty_dict
         strict_subject_placement = strict_constraints
     if forbidden_constraints is not None:
         forbidden_subject_placement = forbidden_constraints
+    
+    # Update break configuration from database
     if break_config is not None:
-        break_periods = {
-            'first': break_config.get('first_break_period', 2),
-            'lunch': break_config.get('lunch_break_period', 4)
-        }
+        break_config_state['first'] = break_config.get('first_break_period', 2)
+        break_config_state['lunch'] = break_config.get('lunch_break_period', 4)
+        # Also update the legacy dict for backward compatibility
+        break_periods['first'] = break_config_state['first']
+        break_periods['lunch'] = break_config_state['lunch']
     
     # Calculate display slots dynamically: 7 periods + 2 breaks = 9 slots
-    global num_display_slots
     num_display_slots = num_periods + 2
     
     # Reset assigned faculties for this generation
