@@ -850,6 +850,13 @@ def smart_optimize(section: str, timetable: Dict[int, Dict[int, Optional[str]]],
             print(f"    ✓ Section {section} is 100% COMPLETE!")
             return timetable, counters, True
 
+        # ACTIVELY try to place incomplete subjects every iteration
+        incomplete = get_incomplete_subjects(section, counters)
+        for subj, deficit in incomplete:
+            if place_avoiding_stuck_cells(section, timetable, counters, subj, stuck_cells, all_timetables):
+                # Successfully placed more - reset loop detection
+                consecutive_same_state = 0
+
         current_state = get_timetable_state_hash(timetable)
         if current_state == last_state_hash:
             consecutive_same_state += 1
