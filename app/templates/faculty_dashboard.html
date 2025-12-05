@@ -177,12 +177,15 @@
             const firstBreakPeriod = parseInt(breakConfig.first_break_period);
             const lunchBreakPeriod = parseInt(breakConfig.lunch_break_period);
 
-            // The timetable in DB is stored as 9 slots with breaks at specific positions:
-            // Breaks are inserted AFTER the period number
-            // E.g., if first_break=1, lunch_break=3:
-            // [P1, BREAK, P2, P3, BREAK, P4, P5, P6, P7]
-            // Slot indices:
-            // 0=P1, 1=BREAK, 2=P2, 3=P3, 4=BREAK, 5=P4, 6=P5, 7=P6, 8=P7
+            // breakConfig contains the PERIOD NUMBER after which breaks occur
+            // E.g., if first_break_period=1, break comes AFTER P1
+            // So layout is: [P1, BREAK, P2, P3, ..., Pn, BREAK, ...]
+            
+            // Calculate actual slot indices for breaks
+            // Slot index = period number (since we insert breaks after periods)
+            // First break slot = first_break_period (0-indexed would be first_break_period)
+            const firstBreakSlot = firstBreakPeriod;  // Break after P1 goes in slot 1, etc.
+            const lunchBreakSlot = firstBreakPeriod + 1 + lunchBreakPeriod;  // Account for first break slot
             
             // Build header with correct slot -> period mapping
             let headerHtml = '<thead><tr><th>Day/Period</th>';
@@ -190,7 +193,7 @@
             let periodNum = 1;
             for (let slot = 0; slot < 9; slot++) {
                 // Check if this slot is a break
-                if (slot === firstBreakPeriod || slot === (firstBreakPeriod + 1 + lunchBreakPeriod)) {
+                if (slot === firstBreakSlot || slot === lunchBreakSlot) {
                     headerHtml += '<th style="background: #dbeafe; color: #0369a1; font-weight: 600;">Break</th>';
                 } else {
                     headerHtml += `<th>P${periodNum}</th>`;
@@ -212,7 +215,7 @@
                         const subject = (dayData && dayData[slot]) || null;
                         
                         // Check if this is a break slot
-                        if (slot === firstBreakPeriod || slot === (firstBreakPeriod + 1 + lunchBreakPeriod)) {
+                        if (slot === firstBreakSlot || slot === lunchBreakSlot) {
                             bodyHtml += '<td class="break-cell">Break</td>';
                         } else if (subject) {
                             bodyHtml += `<td class="class-cell">${subject}</td>`;
