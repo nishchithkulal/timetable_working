@@ -363,6 +363,13 @@ def check_faculty_conflict(faculty: str, section: str, day: int, period: int,
             return True
     return False
 
+def subject_already_on_day(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, day: int) -> bool:
+    """Check if a non-lab subject is already placed on a given day"""
+    for period in range(1, num_periods + 1):
+        if timetable[day][period] == subject:
+            return True
+    return False
+
 def check_consecutive_constraint(timetable: Dict[int, Dict[int, Optional[str]]], subject: str,
                                  day: int, period: int, is_lab: bool) -> bool:
     """
@@ -546,8 +553,8 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                 # Place the lab
                 for i in range(slots_needed):
                     timetable[day][period + i] = subject
-                    counters[subject] += 1
                     faculty_schedule[(section, day, period + i)] = faculty
+                counters[subject] += slots_needed  # Increment by number of hours/periods
                 print(f"    ✓ Placed strict lab {subject} at {days[day]} P{period}-P{period+1}")
 
     subjects_to_place = [s for s, info in subjects_per_section[section].items() if s != "REMEDIAL"]
@@ -596,10 +603,14 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                             if not any(check_faculty_conflict(faculty, section, day, period+i, faculty_schedule) for i in range(2)):
                                 for i in range(2):
                                     timetable[day][period+i] = subject
-                                    counters[subject] += 1
                                     faculty_schedule[(section, day, period+i)] = faculty
+                                counters[subject] += 2  # 2-period lab = 2 hours
                                 break
                 else:
+                    # For non-lab subjects, check if already placed on this day
+                    if subject_already_on_day(timetable, subject, day):
+                        continue
+                    
                     # For non-lab subjects, check consecutive constraint
                     old_val = timetable[day][period]
                     timetable[day][period] = subject
@@ -617,14 +628,8 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                         # Consecutive constraint violated - rollback
                         timetable[day][period] = old_val
 
-    # Fill remaining slots with REMEDIAL
-    for day in range(1, num_days+1):
-        for period in range(1, num_periods+1):
-            if timetable[day][period] is None and counters["REMEDIAL"] < subjects_per_section[section]["REMEDIAL"]["hours"]:
-                if not is_locked_cell(section, day, period):
-                    timetable[day][period] = "REMEDIAL"
-                    counters["REMEDIAL"] += 1
-
+    # Don't fill with REMEDIAL here - let fix_remedial_at_end handle it
+    # That function will reorganize subjects and place REMEDIAL at the end
     return timetable, counters
 
 # ==================== SWAP & SAFE SWAP ====================
@@ -866,103 +871,75 @@ def smart_optimize(section: str, timetable: Dict[int, Dict[int, Optional[str]]],
                         break
 
         fix_remedial_at_end(section, timetable)
+        # Recount subjects after reorganization to get accurate hour counts
+        counters = recount_subjects(section, timetable)
 
     print(f"    ✗ Could not fully optimize after {max_iterations} iterations")
     return timetable, counters, False
 
 def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[str]]]):
+    """Reorganize timetable to place all subjects at the beginning and REMEDIAL at the end
+    Remove duplicate non-lab subjects that appear multiple times per day (constraint violation)"""
     locked_cells = get_all_locked_cells(section)
 
-    for d in range(1, num_days+1):
-        row = [timetable[d][p] for p in range(1, num_periods+1)]
-        non_remedial = []
-        remedial_count = 0
-        lab_blocks = []  # Store lab blocks to preserve continuity
-
-        # Collect subjects and identify lab blocks
-        i = 1
-        while i <= num_periods:
-            s = timetable[d][i]
-            if (d, i) in locked_cells:
-                # Keep locked cells in place
-                i += 1
+    for day in range(1, num_days + 1):
+        # Collect ALL non-None, non-REMEDIAL, non-"Break" subjects
+        subjects_on_day = []
+        for p in range(1, num_periods + 1):
+            subject = timetable[day][p]
+            if subject and subject != "REMEDIAL" and subject != "Break":
+                subjects_on_day.append(subject)
+        
+        # Collect locked cells and their positions FIRST
+        locked_positions = {}
+        locked_subjects = set()  # Track subjects that are locked
+        for period in range(1, num_periods + 1):
+            if (day, period) in locked_cells:
+                locked_positions[period] = timetable[day][period]
+                locked_subjects.add(timetable[day][period])
+        
+        # Filter: remove duplicate non-lab subjects (keep only first occurrence)
+        # Labs can appear multiple times per day (2-period blocks)
+        # IMPORTANT: Do NOT include subjects that are already in locked positions
+        seen_nonlab = set()
+        filtered_subjects = []
+        
+        for subject in subjects_on_day:
+            # Skip subjects that are already placed in locked cells
+            if subject in locked_subjects:
                 continue
+                
+            info = subjects_per_section[section].get(subject, {})
+            is_lab = info.get("lab", False)
             
-            # Check if this is part of a lab block
-            is_part_of_lab = False
-            if s and s != "REMEDIAL":
-                info = subjects_per_section[section].get(s, {})
-                if info.get("lab", False):
-                    # This is a lab - check if it's a complete pair or incomplete
-                    if i < num_periods and timetable[d][i+1] == s:
-                        # It's a 2-period lab block
-                        lab_blocks.append((i, i+1, s))
-                        i += 2
-                        is_part_of_lab = True
-                    else:
-                        # Single period (incomplete lab - should not happen but handle it)
-                        non_remedial.append(s)
-                        i += 1
-                        is_part_of_lab = True
-                else:
-                    # Non-lab subject
-                    non_remedial.append(s)
-                    i += 1
-            elif s == "REMEDIAL":
-                remedial_count += 1
-                i += 1
+            if is_lab:
+                # Labs can appear multiple times per day
+                filtered_subjects.append(subject)
             else:
-                i += 1
-
-        # Clear only non-locked cells
-        for p in range(1, num_periods+1):
-            if (d, p) not in locked_cells:
-                timetable[d][p] = None
-
-        # Refill non-locked cells - preserve lab blocks, prioritize placing them
-        idx = 1
-        non_remedial_idx = 0
-        lab_block_idx = 0
-        placed_subjects = set()  # Track which subjects have been placed
+                # Non-labs: only keep first occurrence per day
+                if subject not in seen_nonlab:
+                    filtered_subjects.append(subject)
+                    seen_nonlab.add(subject)
         
-        while idx <= num_periods:
-            if (d, idx) in locked_cells:
-                # Skip locked cells
-                idx += 1
-                continue
-
-            # Try to place a lab block if available and we have space for 2 periods
-            if lab_block_idx < len(lab_blocks) and idx + 1 <= num_periods and (d, idx+1) not in locked_cells:
-                start, end, subject = lab_blocks[lab_block_idx]
-                # Place the 2-period lab block
-                timetable[d][idx] = subject
-                timetable[d][idx+1] = subject
-                placed_subjects.add(subject)
-                lab_block_idx += 1
-                idx += 2
-                continue
-            
-            # Place non-lab subjects
-            if non_remedial_idx < len(non_remedial):
-                subj = non_remedial[non_remedial_idx]
-                # Don't place if this is a lab (shouldn't happen)
-                info = subjects_per_section[section].get(subj, {})
-                if not info.get("lab", False):
-                    timetable[d][idx] = subj
-                    non_remedial_idx += 1
-                else:
-                    # Skip labs in the non_remedial list (shouldn't happen)
-                    non_remedial_idx += 1
-                    continue
-            elif remedial_count > 0:
-                timetable[d][idx] = "REMEDIAL"
-                remedial_count -= 1
-            
-            idx += 1
+        # Build new arrangement: locked cells first, then other subjects, then REMEDIAL
+        new_arrangement = {}
+        subject_idx = 0
         
-        # If there are unplaced lab blocks, that's a problem
-        if lab_block_idx < len(lab_blocks):
-            print(f"    ⚠ WARNING: Could not place all lab blocks on day {d} in section {section}")
+        for period in range(1, num_periods + 1):
+            if period in locked_positions:
+                # Keep locked cells as-is
+                new_arrangement[period] = locked_positions[period]
+            elif subject_idx < len(filtered_subjects):
+                # Place subjects in order (duplicates already removed, locked subjects excluded)
+                new_arrangement[period] = filtered_subjects[subject_idx]
+                subject_idx += 1
+            else:
+                # Fill remaining with REMEDIAL
+                new_arrangement[period] = "REMEDIAL"
+        
+        # Apply the new arrangement
+        for period in range(1, num_periods + 1):
+            timetable[day][period] = new_arrangement[period]
 
 # ==================== FACULTY TIMETABLE GENERATION ====================
 def generate_faculty_timetables(all_timetables: Dict[str, Dict[int, Dict[int, Optional[str]]]]) -> Dict[str, Dict[int, Dict[int, str]]]:
