@@ -622,7 +622,7 @@ def insertion_algorithm(section: str, all_timetables: Dict[str, Dict[int, Dict[i
                                 counters[subject] += 2  # 2-period lab = 2 hours
                                 break
                 else:
-                    # For non-lab subjects, check if already placed on this day
+                    # For non-lab subjects, can only appear once per day
                     if subject_already_on_day(timetable, subject, day):
                         continue
                     
@@ -809,6 +809,9 @@ def place_avoiding_stuck_cells(section: str, timetable: Dict[int, Dict[int, Opti
                 if (d,p) in stuck_cells or (d,p) in locked_cells:
                     continue
                 if is_locked_cell(section, d, p, subject):
+                    continue
+                # For non-lab subjects, can only place once per day
+                if subject_already_on_day(timetable, subject, d):
                     continue
                 if timetable[d][p] is None:
                     # Temporarily place to check consecutive constraint
