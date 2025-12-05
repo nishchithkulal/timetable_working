@@ -32,21 +32,23 @@
         .timetable-card h3 { color: #1e3a5f; font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
         .timetable-card h3::before { content: ''; width: 4px; height: 24px; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 2px; }
         
-        table { width: 100%; border-collapse: collapse; }
+        table { width: 100%; border-collapse: collapse; background: white; }
         thead tr { background: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 100%); }
         th { padding: 14px 12px; text-align: center; font-weight: 600; color: #1e3a5f; border: 1px solid #e0e8f0; font-size: 13px; }
-        td { padding: 12px 8px; border: 1px solid #e0e8f0; text-align: center; font-size: 13px; color: #2c3e50; }
-        thead tr:first-child th:first-child { text-align: left; }
+        th:first-child { text-align: left; }
+        td { padding: 14px 12px; border: 1px solid #e0e8f0; text-align: center; font-size: 13px; color: #2c3e50; }
         tbody tr:nth-child(odd) { background: #f9fafb; }
         tbody tr:hover { background: #f0f4f8; }
         tbody td:first-child { font-weight: 600; background: #f8fafc; text-align: left; padding-left: 14px; }
         
-        .break-cell { background: #dbeafe !important; color: #0369a1; font-size: 12px; }
-        .class-cell { background: #dbeafe; }
+        .break-cell { background: #dbeafe !important; color: #0369a1; font-weight: 600; }
+        .class-cell { background: white; }
         .empty-cell { background: white; color: #a0aec0; }
         
         .loading-message { text-align: center; padding: 40px 20px; color: white; font-size: 16px; }
         .error-message { background: #fee2e2; color: #991b1b; padding: 16px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #dc2626; display: none; }
+        
+        .timetable-view { overflow-x: auto; }
         
         @media (max-width: 768px) {
             .header { padding: 16px; }
@@ -79,9 +81,25 @@
             
             <div id="timetableContainer" style="display:none;">
                 <div class="card timetable-card">
-                    <h3><span class="material-icons" style="font-size: 24px; color: #3498db;">calendar_today</span>My Timetable</h3>
-                    <div style="overflow-x: auto;">
-                        <table id="timetableTable"></table>
+                    <h3><span class="material-icons" style="font-size: 24px; color: #3498db;">schedule</span>My Timetable</h3>
+                    <div class="timetable-view">
+                        <table id="timetableTable">
+                            <thead>
+                                <tr>
+                                    <th>Day/Period</th>
+                                    <th>P1</th>
+                                    <th>P2</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P3</th>
+                                    <th>P4</th>
+                                    <th style="background: #dbeafe;">Break</th>
+                                    <th>P5</th>
+                                    <th>P6</th>
+                                    <th>P7</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timetableBody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -95,7 +113,6 @@
 
     <script>
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        let breakConfig = { first_break_period: 2, lunch_break_period: 4 }; // Default values
 
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
@@ -115,25 +132,6 @@
         }
 
         function fetchFacultyTimetable() {
-            const deptName = sessionStorage.getItem('dept_name');
-            
-            // Fetch break configuration
-            fetch(`/get-break-config?dept_name=${encodeURIComponent(deptName)}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.ok && data.break_config) {
-                    breakConfig = data.break_config;
-                    console.log('Break config loaded:', breakConfig);
-                } else {
-                    console.warn('Could not load break config:', data);
-                }
-            })
-            .catch(error => console.warn('Could not fetch break config, using defaults:', error));
-            
             // Fetch timetable
             fetch('/get-my-timetable', {
                 method: 'GET',
@@ -164,70 +162,55 @@
         }
 
         function displayTimetable(timetable) {
-            const table = document.getElementById('timetableTable');
-            table.innerHTML = '';
+            const tbody = document.getElementById('timetableBody');
+            tbody.innerHTML = '';
 
-            // Calculate break positions dynamically - convert strings to ints
-            const firstBreak = parseInt(breakConfig.first_break_period);
-            const lunchBreak = parseInt(breakConfig.lunch_break_period);
-            const firstBreakSlot = firstBreak + 1; // +1 for the break itself
-            const secondBreakSlot = lunchBreak + 2; // +2 for both breaks before lunch
-
-            // Header row
-            let headerHtml = '<thead><tr>';
-            headerHtml += '<th>Day / Period</th>';
-            
-            for (let p = 1; p <= 9; p++) {
-                const isBreak = p === firstBreakSlot || p === secondBreakSlot;
-                let periodName = 'Break';
-                if (!isBreak) {
-                    if (p < firstBreakSlot) {
-                        periodName = `P${p}`;
-                    } else if (p < secondBreakSlot) {
-                        periodName = `P${p - 1}`;
-                    } else {
-                        periodName = `P${p - 2}`;
-                    }
-                }
-                headerHtml += `<th>${periodName}</th>`;
+            if (!timetable || timetable.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="padding: 30px; text-align: center; color: #a0aec0;">No classes scheduled</td></tr>';
+                return;
             }
-            headerHtml += '</tr></thead>';
-            table.innerHTML += headerHtml;
 
-            // Data rows
-            let bodyHtml = '<tbody>';
-            if (timetable && timetable.length > 0) {
-                timetable.forEach((dayData, dayIdx) => {
-                    bodyHtml += '<tr>';
-                    bodyHtml += `<td>${days[dayIdx]}</td>`;
+            // Display each day
+            timetable.forEach((dayData, dayIdx) => {
+                const row = document.createElement('tr');
+                const dayCell = document.createElement('td');
+                dayCell.textContent = days[dayIdx] || `Day ${dayIdx + 1}`;
+                dayCell.style.fontWeight = '600';
+                dayCell.style.background = '#f8fafc';
+                row.appendChild(dayCell);
+
+                // Fixed column order: P1, P2, Break, P3, P4, Break, P5, P6, P7
+                const fixedOrder = [0, 1, 'BREAK1', 2, 3, 'BREAK2', 4, 5, 6];
+                
+                fixedOrder.forEach(idx => {
+                    const cell = document.createElement('td');
                     
-                    if (dayData && dayData.length > 0) {
-                        dayData.forEach((subject, periodIdx) => {
-                            const displayIdx = periodIdx + 1; // Convert 0-indexed to 1-indexed
-                            const isBreak = displayIdx === firstBreakSlot || displayIdx === secondBreakSlot;
-                            let cellClass = '';
-                            let cellContent = '-';
-                            
-                            if (isBreak) {
-                                cellClass = 'break-cell';
-                                cellContent = 'Break';
-                            } else if (subject && subject !== 'Break') {
-                                cellClass = 'class-cell';
-                                cellContent = subject;
-                            } else {
-                                cellClass = 'empty-cell';
-                            }
-                            
-                            bodyHtml += `<td class="${cellClass}">${cellContent}</td>`;
-                        });
+                    if (idx === 'BREAK1' || idx === 'BREAK2') {
+                        // Break cells
+                        cell.textContent = 'Break';
+                        cell.className = 'break-cell';
+                        cell.style.background = '#dbeafe';
+                        cell.style.color = '#0369a1';
+                        cell.style.fontWeight = '600';
+                    } else {
+                        // Teaching period cells
+                        const subject = (dayData && dayData[idx]) || null;
+                        
+                        if (subject && subject !== 'Break') {
+                            cell.textContent = subject;
+                            cell.className = 'class-cell';
+                        } else {
+                            cell.textContent = '-';
+                            cell.className = 'empty-cell';
+                            cell.style.color = '#a0aec0';
+                        }
                     }
-                    bodyHtml += '</tr>';
+                    
+                    row.appendChild(cell);
                 });
-            } else {
-                bodyHtml += '<tr><td colspan="10" style="padding: 30px; text-align: center; color: #a0aec0;">No classes scheduled</td></tr>';
-            }
-            bodyHtml += '</tbody>';
-            table.innerHTML += bodyHtml;
+
+                tbody.appendChild(row);
+            });
         }
 
         function showError(message) {

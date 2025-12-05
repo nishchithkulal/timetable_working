@@ -257,8 +257,8 @@ def get_break_configuration(dept_name: str, college_id: str):
     Fetch break configuration for a department.
     
     Returns:
-        dict: {first_break_period, lunch_break_period}
-        Format: {period_name: period_number, ...}
+        dict: {first_break_period, lunch_break_period} if configured
+        None: if break configuration is not configured (user must set it first)
     """
     try:
         break_config = BreakConfiguration.query.filter_by(
@@ -271,20 +271,13 @@ def get_break_configuration(dept_name: str, college_id: str):
                 'lunch_break_period': int(break_config.lunch_break_period)
             }
         else:
-            # Return default break configuration
-            return {
-                'first_break_period': 2,
-                'lunch_break_period': 4
-            }
+            # Return None if not configured - user must configure breaks first
+            return None
         
     except Exception as e:
         logging.exception("Error fetching break configuration from database")
-        # Return default if error
-        return {
-            'first_break_period': 2,
-            'lunch_break_period': 4,
-            'second_break_period': 6
-        }
+        # Return None if error - don't use defaults
+        return None
 
 @app.route('/generate-timetable', methods=['POST'])
 def generate_timetable():
@@ -321,6 +314,12 @@ def generate_timetable():
             
             # Fetch break configuration for this department
             break_config = get_break_configuration(dept_name, college_id)
+            
+            # Check if break configuration is set
+            if break_config is None:
+                logging.error(f"Break configuration not set for {dept_name}")
+                return jsonify({'ok': False, 'error': 'Please configure break timings before generating timetables'}), 400
+            
             logging.info(f"Loaded break configuration: {break_config}")
             
             # Suppress algorithm debug output by redirecting stderr

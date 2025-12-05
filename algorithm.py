@@ -353,14 +353,29 @@ def check_last_subject_overlap(section: str, subject: str, day: int, period: int
 
 def check_faculty_conflict(faculty: str, section: str, day: int, period: int,
                           faculty_schedule: Dict[Tuple[str, int, int], str]) -> bool:
-    # Check all sections (including same section) for faculty conflicts
+    """Check if faculty has conflicts (already teaching at same time or adjacent time in any section).
+    
+    Prevents faculty from:
+    1. Teaching in the same period (same day and period)
+    2. Teaching in consecutive periods (prevents overload - faculty needs break between classes)
+    3. Teaching in adjacent periods across different sections
+    """
+    if not faculty:
+        return False
+    
+    # Check all sections for conflicts
     for other_section in sections:
+        # Conflict 1: Faculty already teaching at this exact period in any section
         if (other_section, day, period) in faculty_schedule and faculty_schedule[(other_section, day, period)] == faculty:
             return True
+        
+        # Conflict 2: Faculty teaching in adjacent periods (overload prevention)
+        # Faculty cannot teach in consecutive periods to avoid exhaustion
         if period < num_periods and (other_section, day, period + 1) in faculty_schedule and faculty_schedule[(other_section, day, period + 1)] == faculty:
-            return True
+            return True  # Faculty already at period+1
         if period > 1 and (other_section, day, period - 1) in faculty_schedule and faculty_schedule[(other_section, day, period - 1)] == faculty:
-            return True
+            return True  # Faculty already at period-1
+    
     return False
 
 def subject_already_on_day(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, day: int) -> bool:
