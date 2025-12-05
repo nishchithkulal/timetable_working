@@ -83,23 +83,7 @@
                 <div class="card timetable-card">
                     <h3><span class="material-icons" style="font-size: 24px; color: #3498db;">schedule</span>My Timetable</h3>
                     <div class="timetable-view">
-                        <table id="timetableTable">
-                            <thead>
-                                <tr>
-                                    <th>Day/Period</th>
-                                    <th>P1</th>
-                                    <th>P2</th>
-                                    <th style="background: #dbeafe;">Break</th>
-                                    <th>P3</th>
-                                    <th>P4</th>
-                                    <th style="background: #dbeafe;">Break</th>
-                                    <th>P5</th>
-                                    <th>P6</th>
-                                    <th>P7</th>
-                                </tr>
-                            </thead>
-                            <tbody id="timetableBody"></tbody>
-                        </table>
+                        <table id="timetableTable"></table>
                     </div>
                 </div>
             </div>
@@ -113,6 +97,7 @@
 
     <script>
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        let breakConfig = { first_break_period: 2, lunch_break_period: 4 }; // Will be fetched from DB
 
         function checkLogin() {
             const facultyId = sessionStorage.getItem('faculty_id');
@@ -132,8 +117,31 @@
         }
 
         function fetchFacultyTimetable() {
-            // Fetch timetable
-            fetch('/get-my-timetable', {
+            const deptName = sessionStorage.getItem('dept_name');
+            
+            // Fetch break configuration first
+            fetch(`/get-break-config?dept_name=${encodeURIComponent(deptName)}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.ok && data.break_config) {
+                    breakConfig = data.break_config;
+                    console.log('Break config loaded:', breakConfig);
+                }
+                // Continue to fetch timetable regardless of break config
+                return fetchTimetableData();
+            })
+            .catch(error => {
+                console.warn('Could not fetch break config, using defaults:', error);
+                return fetchTimetableData();
+            });
+        }
+
+        function fetchTimetableData() {
+            return fetch('/get-my-timetable', {
                 method: 'GET',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' }
@@ -162,55 +170,64 @@
         }
 
         function displayTimetable(timetable) {
-            const tbody = document.getElementById('timetableBody');
-            tbody.innerHTML = '';
+            const table = document.getElementById('timetableTable');
+            table.innerHTML = '';
 
-            if (!timetable || timetable.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding: 30px; text-align: center; color: #a0aec0;">No classes scheduled</td></tr>';
-                return;
+            // Parse break configuration
+            const firstBreakPeriod = parseInt(breakConfig.first_break_period);
+            const lunchBreakPeriod = parseInt(breakConfig.lunch_break_period);
+
+            // The timetable in DB is stored as 9 slots with breaks at specific positions:
+            // Breaks are inserted AFTER the period number
+            // E.g., if first_break=1, lunch_break=3:
+            // [P1, BREAK, P2, P3, BREAK, P4, P5, P6, P7]
+            // Slot indices:
+            // 0=P1, 1=BREAK, 2=P2, 3=P3, 4=BREAK, 5=P4, 6=P5, 7=P6, 8=P7
+            
+            // Build header with correct slot -> period mapping
+            let headerHtml = '<thead><tr><th>Day/Period</th>';
+            
+            let periodNum = 1;
+            for (let slot = 0; slot < 9; slot++) {
+                // Check if this slot is a break
+                if (slot === firstBreakPeriod || slot === (firstBreakPeriod + 1 + lunchBreakPeriod)) {
+                    headerHtml += '<th style="background: #dbeafe; color: #0369a1; font-weight: 600;">Break</th>';
+                } else {
+                    headerHtml += `<th>P${periodNum}</th>`;
+                    periodNum++;
+                }
             }
+            headerHtml += '</tr></thead>';
+            table.innerHTML = headerHtml;
 
-            // Display each day
-            timetable.forEach((dayData, dayIdx) => {
-                const row = document.createElement('tr');
-                const dayCell = document.createElement('td');
-                dayCell.textContent = days[dayIdx] || `Day ${dayIdx + 1}`;
-                dayCell.style.fontWeight = '600';
-                dayCell.style.background = '#f8fafc';
-                row.appendChild(dayCell);
-
-                // Fixed column order: P1, P2, Break, P3, P4, Break, P5, P6, P7
-                const fixedOrder = [0, 1, 'BREAK1', 2, 3, 'BREAK2', 4, 5, 6];
-                
-                fixedOrder.forEach(idx => {
-                    const cell = document.createElement('td');
+            // Build table body
+            let bodyHtml = '<tbody>';
+            if (timetable && timetable.length > 0) {
+                timetable.forEach((dayData, dayIdx) => {
+                    bodyHtml += '<tr>';
+                    bodyHtml += `<td>${days[dayIdx] || ''}</td>`;
                     
-                    if (idx === 'BREAK1' || idx === 'BREAK2') {
-                        // Break cells
-                        cell.textContent = 'Break';
-                        cell.className = 'break-cell';
-                        cell.style.background = '#dbeafe';
-                        cell.style.color = '#0369a1';
-                        cell.style.fontWeight = '600';
-                    } else {
-                        // Teaching period cells
-                        const subject = (dayData && dayData[idx]) || null;
+                    // Iterate through all 9 slots
+                    for (let slot = 0; slot < 9; slot++) {
+                        const subject = (dayData && dayData[slot]) || null;
                         
-                        if (subject && subject !== 'Break') {
-                            cell.textContent = subject;
-                            cell.className = 'class-cell';
+                        // Check if this is a break slot
+                        if (slot === firstBreakPeriod || slot === (firstBreakPeriod + 1 + lunchBreakPeriod)) {
+                            bodyHtml += '<td class="break-cell">Break</td>';
+                        } else if (subject) {
+                            bodyHtml += `<td class="class-cell">${subject}</td>`;
                         } else {
-                            cell.textContent = '-';
-                            cell.className = 'empty-cell';
-                            cell.style.color = '#a0aec0';
+                            bodyHtml += '<td class="empty-cell">-</td>';
                         }
                     }
                     
-                    row.appendChild(cell);
+                    bodyHtml += '</tr>';
                 });
-
-                tbody.appendChild(row);
-            });
+            } else {
+                bodyHtml += `<tr><td colspan="10" style="padding: 30px; text-align: center; color: #a0aec0;">No classes scheduled</td></tr>`;
+            }
+            bodyHtml += '</tbody>';
+            table.innerHTML += bodyHtml;
         }
 
         function showError(message) {
