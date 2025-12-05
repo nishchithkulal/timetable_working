@@ -946,9 +946,11 @@ def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[st
                     filtered_subjects.append(subject)
                     seen_nonlab.add(subject)
         
-        # Build new arrangement: locked cells first, then other subjects, then REMEDIAL
+        # Build new arrangement: locked cells first, then other subjects, then REMEDIAL (max 3 per day)
         new_arrangement = {}
         subject_idx = 0
+        remedial_count = 0
+        max_remedial_per_day = 3
         
         for period in range(1, num_periods + 1):
             if period in locked_positions:
@@ -958,9 +960,13 @@ def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[st
                 # Place subjects in order (duplicates already removed, locked subjects excluded)
                 new_arrangement[period] = filtered_subjects[subject_idx]
                 subject_idx += 1
-            else:
-                # Fill remaining with REMEDIAL
+            elif remedial_count < max_remedial_per_day:
+                # Fill remaining with REMEDIAL (up to max 3 per day)
                 new_arrangement[period] = "REMEDIAL"
+                remedial_count += 1
+            else:
+                # After max remedial reached, leave empty
+                new_arrangement[period] = None
         
         # Apply the new arrangement
         for period in range(1, num_periods + 1):
