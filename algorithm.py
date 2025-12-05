@@ -903,34 +903,39 @@ def smart_optimize(section: str, timetable: Dict[int, Dict[int, Optional[str]]],
     return timetable, counters, False
 
 def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[str]]]):
-    """Reorganize timetable to place all subjects at the beginning and REMEDIAL at the end
+    """Reorganize timetable to place all subjects at the beginning (P1-P4) and REMEDIAL at the end (P5-P7)
     Remove duplicate non-lab subjects that appear multiple times per day (constraint violation)"""
     locked_cells = get_all_locked_cells(section)
 
     for day in range(1, num_days + 1):
-        # Collect ALL non-None, non-REMEDIAL, non-"Break" subjects
-        subjects_on_day = []
-        for p in range(1, num_periods + 1):
+        # Collect ALL subjects from P1-P4 (working periods)
+        subjects_p1_p4 = []
+        for p in range(1, 5):  # Only P1-P4
             subject = timetable[day][p]
             if subject and subject != "REMEDIAL" and subject != "Break":
-                subjects_on_day.append(subject)
+                subjects_p1_p4.append(subject)
         
-        # Collect locked cells and their positions FIRST
+        # Collect ALL subjects from P5-P7 (what's currently there)
+        subjects_p5_p7 = []
+        for p in range(5, 8):  # P5-P7
+            subject = timetable[day][p]
+            if subject and subject != "REMEDIAL" and subject != "Break":
+                subjects_p5_p7.append(subject)
+        
+        # Collect locked cells and their positions
         locked_positions = {}
-        locked_subjects = set()  # Track subjects that are locked
+        locked_subjects = set()
         for period in range(1, num_periods + 1):
             if (day, period) in locked_cells:
                 locked_positions[period] = timetable[day][period]
                 locked_subjects.add(timetable[day][period])
         
-        # Filter: remove duplicate non-lab subjects (keep only first occurrence)
-        # Labs can appear multiple times per day (2-period blocks)
-        # IMPORTANT: Do NOT include subjects that are already in locked positions
+        # Filter P1-P4 subjects: remove duplicate non-lab subjects
         seen_nonlab = set()
-        filtered_subjects = []
+        filtered_p1_p4 = []
         
-        for subject in subjects_on_day:
-            # Skip subjects that are already placed in locked cells
+        for subject in subjects_p1_p4:
+            # Skip subjects that are already in locked cells
             if subject in locked_subjects:
                 continue
                 
@@ -939,34 +944,40 @@ def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[st
             
             if is_lab:
                 # Labs can appear multiple times per day
-                filtered_subjects.append(subject)
+                filtered_p1_p4.append(subject)
             else:
                 # Non-labs: only keep first occurrence per day
                 if subject not in seen_nonlab:
-                    filtered_subjects.append(subject)
+                    filtered_p1_p4.append(subject)
                     seen_nonlab.add(subject)
         
-        # Build new arrangement: locked cells first, then other subjects, then REMEDIAL (max 3 per day)
+        # Also include P5-P7 subjects in the main list to preserve them
+        all_subjects = filtered_p1_p4 + subjects_p5_p7
+        
+        # Build new arrangement: 
+        # P1-P4: locked cells + other subjects
+        # P5-P7: REMEDIAL (up to 3)
         new_arrangement = {}
         subject_idx = 0
-        remedial_count = 0
-        max_remedial_per_day = 3
         
-        for period in range(1, num_periods + 1):
+        # Fill P1-P4 with subjects
+        for period in range(1, 5):
             if period in locked_positions:
-                # Keep locked cells as-is
                 new_arrangement[period] = locked_positions[period]
-            elif subject_idx < len(filtered_subjects):
-                # Place subjects in order (duplicates already removed, locked subjects excluded)
-                new_arrangement[period] = filtered_subjects[subject_idx]
+            elif subject_idx < len(filtered_p1_p4):
+                new_arrangement[period] = filtered_p1_p4[subject_idx]
                 subject_idx += 1
-            elif remedial_count < max_remedial_per_day:
-                # Fill remaining with REMEDIAL (up to max 3 per day)
-                new_arrangement[period] = "REMEDIAL"
-                remedial_count += 1
             else:
-                # After max remedial reached, leave empty
                 new_arrangement[period] = None
+        
+        # Fill P5-P7 with REMEDIAL only (max 3 periods)
+        for period in range(5, 8):
+            if period in locked_positions:
+                # Keep locked cells in P5-P7 as-is
+                new_arrangement[period] = locked_positions[period]
+            else:
+                # Fill with REMEDIAL
+                new_arrangement[period] = "REMEDIAL"
         
         # Apply the new arrangement
         for period in range(1, num_periods + 1):
