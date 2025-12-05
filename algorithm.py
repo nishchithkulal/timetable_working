@@ -388,36 +388,23 @@ def subject_already_on_day(timetable: Dict[int, Dict[int, Optional[str]]], subje
 def check_consecutive_constraint(timetable: Dict[int, Dict[int, Optional[str]]], subject: str,
                                  day: int, period: int, is_lab: bool) -> bool:
     """
-    STRICT: Non-lab subjects can ONLY be consecutive at the period pairs that cross breaks.
-    All other consecutive periods are BLOCKED for non-lab subjects.
+    STRICT: Non-lab subjects can NEVER be consecutive on the same day.
+    This means: if subject is at period P, it cannot be at P-1 or P+1.
     Labs are always allowed to be consecutive (they are 2-period blocks).
-    
-    For example, with breaks after periods 2 and 4:
-    - Allowed pairs: (2,3) and (4,5) [crossing the breaks]
-    - Blocked pairs: (1,2), (3,4), (5,6), (6,7) [within same "block"]
     """
     if is_lab:
         return True
 
-    # Calculate allowed consecutive period pairs dynamically based on break configuration
-    # Periods right before and after a break can be consecutive
-    allowed_consecutive_pairs = []
+    # Non-lab subjects: check if the same subject is already at adjacent periods
+    # This prevents multiple occurrences even at break boundaries
     
-    # Pair crossing first break: (first_break_period, first_break_period + 1)
-    allowed_consecutive_pairs.append((get_first_break_period(), get_first_break_period() + 1))
-    
-    # Pair crossing lunch break: (lunch_break_period, lunch_break_period + 1)
-    allowed_consecutive_pairs.append((get_lunch_break_period(), get_lunch_break_period() + 1))
-
     # Check previous period
     if period > 1 and timetable[day][period-1] == subject:
-        if (period-1, period) not in allowed_consecutive_pairs:
-            return False  # BLOCKED: consecutive not allowed here
+        return False  # BLOCKED: cannot be consecutive with same subject
 
     # Check next period
     if period < num_periods and timetable[day][period+1] == subject:
-        if (period, period+1) not in allowed_consecutive_pairs:
-            return False  # BLOCKED: consecutive not allowed here
+        return False  # BLOCKED: cannot be consecutive with same subject
 
     return True
 
@@ -480,11 +467,22 @@ def can_place_lab(timetable: Dict[int, Dict[int, Optional[str]]], subject: str, 
 
 def get_preferred_lab_periods() -> List[int]:
     """Return lab starting periods in priority order: preferred first, fallback last.
-    Excludes periods where a 2-period lab would be interrupted by a break.
+    Labs are 2-period consecutive blocks. They should NOT cross break boundaries.
     
-    A lab occupies 2 consecutive periods. It should NOT cross breaks.
-    Example: if break is after P1, then P1-P2 is invalid (would cross break).
-    Valid periods are those where both p and p+1 don't cross any break."""
+    Break configuration:
+    - first_break_period = 2 means break is AFTER P2 (between P2 and P3)
+    - lunch_break_period = 4 means break is AFTER P4 (between P4 and P5)
+    
+    Lab at period P means occupying P and P+1.
+    A lab crosses a break if the break is between P and P+1.
+    
+    Example with first_break=2, lunch_break=4:
+    - Lab P1-P2: OK (no break between them)
+    - Lab P2-P3: INVALID (break after P2 is between them)
+    - Lab P3-P4: OK
+    - Lab P4-P5: INVALID (break after P4 is between them)
+    - Lab P5-P6: OK
+    - Lab P6-P7: OK"""
     
     first_break = get_first_break_period()
     lunch_break = get_lunch_break_period()
@@ -492,35 +490,23 @@ def get_preferred_lab_periods() -> List[int]:
     valid_periods = []
     for p in range(1, num_periods):  # p can be 1-6 (need p+1 to exist)
         # A lab at period p occupies p and p+1
-        # It's invalid if it crosses a break
-        # Break after period X means break is between X and X+1
+        # It's invalid if a break is between p and p+1
         
-        # Check if lab p-(p+1) crosses first break
+        # Break after first_break_period is between first_break_period and first_break_period+1
         if p == first_break:
-            # Lab would be at p and p+1, but break is after p, so it crosses
+            # Lab would be P[first_break]-P[first_break+1], break is between them
             continue
-        if p + 1 == first_break:
-            # Lab at p-(p+1), break after p+1, still crosses
-            # Actually, break after period X is between X and X+1
-            # So if lab ends at first_break, it crosses
-            continue
-            
-        # Check if lab p-(p+1) crosses lunch break
+        
+        # Break after lunch_break_period is between lunch_break_period and lunch_break_period+1
         if p == lunch_break:
-            continue
-        if p + 1 == lunch_break:
+            # Lab would be P[lunch_break]-P[lunch_break+1], break is between them
             continue
         
         valid_periods.append(p)
     
-    # Reorder: put 3, 5, 6 first (preferred), then 1 (fallback)
-    preferred = []
-    fallback = []
-    for p in valid_periods:
-        if p in [3, 5, 6]:
-            preferred.append(p)
-        else:
-            fallback.append(p)
+    # Reorder: put 3, 5, 6 first (preferred), then rest (fallback)
+    preferred = [p for p in valid_periods if p in [3, 5, 6]]
+    fallback = [p for p in valid_periods if p not in [3, 5, 6]]
     
     return preferred + fallback
 
@@ -921,80 +907,73 @@ def smart_optimize(section: str, timetable: Dict[int, Dict[int, Optional[str]]],
                     else:
                         break  # Can't place anymore
 
-        fix_remedial_at_end(section, timetable)
-        # Recount subjects after reorganization to get accurate hour counts
-        counters = recount_subjects(section, timetable)
-
     print(f"    ✗ Could not fully optimize after {max_iterations} iterations")
+    # Do final cleanup before returning
+    fix_remedial_at_end(section, timetable)
+    counters = recount_subjects(section, timetable)
     return timetable, counters, False
 
 def fix_remedial_at_end(section: str, timetable: Dict[int, Dict[int, Optional[str]]]):
-    """Reorganize timetable: prioritize REMEDIAL in P5-P7 (max 3), shift subjects if needed
-    Remove duplicate non-lab subjects that appear multiple times per day (constraint violation)"""
+    """Final cleanup: 
+    1. Remove duplicate non-lab subjects from same day (keep only first occurrence)
+    2. Fill empty slots in P5-P7 with REMEDIAL (max 3 total per day, only in last 3 periods)
+    3. Never remove already-placed subjects, only fill gaps"""
     locked_cells = get_all_locked_cells(section)
 
     for day in range(1, num_days + 1):
-        # Collect ALL subjects from all periods
-        subjects_on_day = []
-        for p in range(1, num_periods + 1):
-            subject = timetable[day][p]
-            if subject and subject != "REMEDIAL" and subject != "Break":
-                subjects_on_day.append(subject)
-        
-        # Collect locked cells and their positions
-        locked_positions = {}
-        locked_subjects = set()
-        for period in range(1, num_periods + 1):
-            if (day, period) in locked_cells:
-                locked_positions[period] = timetable[day][period]
-                locked_subjects.add(timetable[day][period])
-        
-        # Filter: remove duplicate non-lab subjects (keep only first occurrence)
+        # Pass 1: Remove duplicate non-lab subjects (keep only first occurrence per day)
         seen_nonlab = set()
-        filtered_subjects = []
         
-        for subject in subjects_on_day:
-            # Skip subjects that are already in locked cells
-            if subject in locked_subjects:
+        for period in range(1, num_periods + 1):
+            subject = timetable[day][period]
+            if not subject:
                 continue
-                
+            
+            # Skip locked subjects
+            if (day, period) in locked_cells:
+                # For locked cells, just track if we've seen this subject
+                info = subjects_per_section[section].get(subject, {})
+                is_lab = info.get("lab", False)
+                if not is_lab and subject != "REMEDIAL":
+                    seen_nonlab.add(subject)
+                continue
+            
+            # Get subject info
             info = subjects_per_section[section].get(subject, {})
             is_lab = info.get("lab", False)
             
             if is_lab:
-                # Labs can appear multiple times per day
-                filtered_subjects.append(subject)
+                # Labs can appear multiple times per day - keep as-is
+                continue
+            elif subject == "REMEDIAL":
+                # Don't track REMEDIAL in duplicates
+                continue
             else:
-                # Non-labs: only keep first occurrence per day
-                if subject not in seen_nonlab:
-                    filtered_subjects.append(subject)
+                # Non-lab subject: only keep first occurrence per day
+                if subject in seen_nonlab:
+                    # This is a duplicate - remove it
+                    timetable[day][period] = None
+                else:
                     seen_nonlab.add(subject)
         
-        # Build new arrangement
-        new_arrangement = {}
-        subject_idx = 0
+        # Pass 2: Fill empty slots in P5-P7 with REMEDIAL (max 3 per day)
         remedial_count = 0
-        max_remedial = 3  # Maximum 3 REMEDIAL periods per day
+        max_remedial = 3
         
-        for period in range(1, num_periods + 1):
-            if period in locked_positions:
-                # Keep locked cells as-is
-                new_arrangement[period] = locked_positions[period]
-            elif subject_idx < len(filtered_subjects):
-                # Place subjects in order
-                new_arrangement[period] = filtered_subjects[subject_idx]
-                subject_idx += 1
-            elif remedial_count < max_remedial:
-                # Add REMEDIAL up to max 3 periods per day
-                new_arrangement[period] = "REMEDIAL"
+        for period in range(5, 8):  # Only P5, P6, P7
+            if period > num_periods:
+                break
+            
+            subject = timetable[day][period]
+            
+            # If slot is empty and not locked, try to fill with REMEDIAL
+            if subject is None and (day, period) not in locked_cells:
+                if remedial_count < max_remedial:
+                    timetable[day][period] = "REMEDIAL"
+                    remedial_count += 1
+            elif subject == "REMEDIAL":
+                # Count existing REMEDIAL
                 remedial_count += 1
-            else:
-                # After max REMEDIAL reached, leave empty
-                new_arrangement[period] = None
-        
-        # Apply the new arrangement
-        for period in range(1, num_periods + 1):
-            timetable[day][period] = new_arrangement[period]
 
 # ==================== FACULTY TIMETABLE GENERATION ====================
 def generate_faculty_timetables(all_timetables: Dict[str, Dict[int, Dict[int, Optional[str]]]]) -> Dict[str, Dict[int, Dict[int, str]]]:
